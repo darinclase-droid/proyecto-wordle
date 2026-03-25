@@ -1,0 +1,68 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #121213;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 10px;
+}
+
+#tablero {
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  gap: 5px;
+  margin: 20px 0;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: repeat(5, 60px);
+  gap: 5px;
+}
+
+.celda {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #3a3a3c;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.verde {
+  background: #6aaa64;
+  border: none;
+}
+
+.amarillo {
+  background: #c9b458;
+  border: none;
+}
+
+.gris {
+  background: #3a3a3c;
+  border: none;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  background: #538d4e;
+  color: white;
+}
+
+button:hover {
+  opacity: 0.9;
+}
