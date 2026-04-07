@@ -6,235 +6,48 @@
   <style>
     body { font-family: Arial, sans-serif; background:#121213; color:white; display:flex; flex-direction:column; align-items:center; margin:0; padding:20px; }
     h1 { margin:10px; }
-
     #tablero { display:grid; grid-template-rows:repeat(6,1fr); gap:6px; margin:20px 0; }
     .fila { display:grid; grid-template-columns:repeat(5,60px); gap:6px; }
-
     .celda {
       width:60px; height:60px; border:2px solid #3a3a3c;
       display:flex; justify-content:center; align-items:center;
       font-size:2rem; font-weight:bold; text-transform:uppercase;
       transition: transform 0.3s;
     }
-
     .flip { transform: rotateX(360deg); }
-
     .verde { background:#6aaa64; border:none; }
     .amarillo { background:#c9b458; border:none; }
     .gris { background:#3a3a3c; border:none; }
-
     #teclado { margin-top:10px; }
     .fila-teclado { display:flex; justify-content:center; margin:5px; }
-
     .tecla {
       margin:2px; padding:10px; min-width:30px;
       background:#818384; border:none; border-radius:4px;
       color:white; cursor:pointer;
     }
-
     .tecla.verde { background:#6aaa64; }
     .tecla.amarillo { background:#c9b458; }
     .tecla.gris { background:#3a3a3c; }
-
-    button { padding:10px 20px; margin:10px; cursor:pointer; }
+    button { padding:10px 20px; margin:10px; cursor:pointer; border:none; border-radius:6px; background:#538d4e; color:white; font-size:1rem; }
+    button:hover { opacity:0.9; }
+    #botones-modo { display:flex; gap:10px; }
+    #btn-clasico { background:#538d4e; }
+    #btn-contrarreloj { background:#b59f3b; }
+    #btn-clasico.activo { outline: 3px solid white; }
+    #btn-contrarreloj.activo { outline: 3px solid white; }
   </style>
 </head>
 <body>
-
 <h1>Wordle PRO</h1>
-<button onclick="reiniciarJuego()">Nueva partida</button>
+<button onclick="nuevaPartida()">Nueva partida</button>
 <div id="stats"></div>
-
 <div id="tablero"></div>
 <div id="teclado"></div>
-
-<script>
-let palabras = [];
-let palabraSecreta = "";
-let filaActual = 0;
-let letraActual = 0;
-let juegoActivo = true;
-
-const tablero = document.getElementById("tablero");
-const teclado = document.getElementById("teclado");
-
-// --- ESTADÍSTICAS ---
-let stats = JSON.parse(localStorage.getItem("wordleStats")) || { jugadas:0, ganadas:0 };
-function actualizarStats() {
-  document.getElementById("stats").innerText = `Jugadas: ${stats.jugadas} | Ganadas: ${stats.ganadas}`;
-}
-
-// --- CARGAR PALABRAS ---
-async function cargarPalabras() {
-  const res = await fetch("palabras_castellano_5_letras.json");
-  palabras = await res.json();
-}
-
-// --- TABLERO ---
-function crearTablero() {
-  tablero.innerHTML = "";
-  for (let i=0;i<6;i++){
-    const fila = document.createElement("div");
-    fila.className="fila";
-    for (let j=0;j<5;j++){
-      const celda = document.createElement("div");
-      celda.className="celda";
-      fila.appendChild(celda);
-    }
-    tablero.appendChild(fila);
-  }
-}
-
-// --- TECLADO ---
-function crearTeclado(){
-  teclado.innerHTML="";
-  const filas = [
-    ["Q","W","E","R","T","Y","U","I","O","P"],
-    ["A","S","D","F","G","H","J","K","L"],
-    ["↵","Z","X","C","V","B","N","M","⌫"]
-  ];
-
-  filas.forEach(f=>{
-    const fila = document.createElement("div");
-    fila.className="fila-teclado";
-
-    f.forEach(letra=>{
-      const tecla = document.createElement("button");
-      tecla.className="tecla";
-      tecla.textContent = letra;
-      tecla.id = "tecla-" + letra;
-
-      tecla.onclick = ()=>{
-        if(letra==="↵") enviarIntento();
-        else if(letra==="⌫") borrarLetra();
-        else escribirLetra(letra);
-      };
-
-      fila.appendChild(tecla);
-    });
-
-    teclado.appendChild(fila);
-  });
-}
-
-// --- PINTAR TECLAS ---
-function pintarTecla(letra, estado) {
-  const tecla = document.getElementById("tecla-" + letra);
-  if (!tecla) return;
-
-  if (estado === "verde") {
-    tecla.classList.remove("amarillo","gris");
-    tecla.classList.add("verde");
-  } else if (estado === "amarillo") {
-    if (!tecla.classList.contains("verde")) {
-      tecla.classList.remove("gris");
-      tecla.classList.add("amarillo");
-    }
-  } else {
-    if (!tecla.classList.contains("verde") && !tecla.classList.contains("amarillo")) {
-      tecla.classList.add("gris");
-    }
-  }
-}
-
-// --- JUEGO ---
-function elegirPalabra(){
-  palabraSecreta = palabras[Math.floor(Math.random()*palabras.length)];
-}
-
-function reiniciarJuego(){
-  location.reload();
-}
-
-function escribirLetra(letra){
-  if(!juegoActivo||letraActual>=5) return;
-  const fila = tablero.children[filaActual];
-  fila.children[letraActual].textContent = letra;
-  letraActual++;
-}
-
-function borrarLetra(){
-  if(letraActual<=0) return;
-  letraActual--;
-  tablero.children[filaActual].children[letraActual].textContent="";
-}
-
-function enviarIntento(){
-  if(letraActual<5) return;
-
-  const fila = tablero.children[filaActual];
-  let intento="";
-  for(let i=0;i<5;i++) intento+=fila.children[i].textContent;
-
-  if(!palabras.includes(intento)){
-    alert("Palabra no válida");
-    return;
-  }
-
-  comprobarIntento(intento,fila);
-
-  if(intento===palabraSecreta){
-    alert("¡Ganaste!");
-    stats.jugadas++; stats.ganadas++;
-    localStorage.setItem("wordleStats",JSON.stringify(stats));
-    juegoActivo=false;
-    actualizarStats();
-    return;
-  }
-
-  filaActual++; letraActual=0;
-
-  if(filaActual===6){
-    alert("Perdiste: "+palabraSecreta);
-    stats.jugadas++;
-    localStorage.setItem("wordleStats",JSON.stringify(stats));
-    juegoActivo=false;
-    actualizarStats();
-  }
-}
-
-function comprobarIntento(intento,fila){
-  for(let i=0;i<5;i++){
-    const letra=intento[i];
-    const celda=fila.children[i];
-
-    setTimeout(()=>{
-      celda.classList.add("flip");
-
-      if(letra===palabraSecreta[i]){
-        celda.classList.add("verde");
-        pintarTecla(letra,"verde");
-      }
-      else if(palabraSecreta.includes(letra)){
-        celda.classList.add("amarillo");
-        pintarTecla(letra,"amarillo");
-      }
-      else{
-        celda.classList.add("gris");
-        pintarTecla(letra,"gris");
-      }
-
-    }, i*300);
-  }
-}
-
-// --- TECLADO FÍSICO ---
-document.addEventListener("keydown",e=>{
-  if(!juegoActivo) return;
-
-  if(e.key==="Enter") enviarIntento();
-  else if(e.key==="Backspace") borrarLetra();
-  else if(/^[a-zA-ZñÑ]$/.test(e.key)) escribirLetra(e.key.toUpperCase());
-});
-
-// --- INICIO ---
-async function iniciar(){
-  await cargarPalabras();
-  crearTablero(); crearTeclado(); elegirPalabra(); actualizarStats();
-}
-
-iniciar();
-</script>
-
+<div id="botones-modo">
+  <button id="btn-clasico" onclick="activarModoClasico()">Modo clásico</button>
+  <button id="btn-contrarreloj" onclick="activarContrarreloj()">Modo contrarreloj</button>
+</div>
+<div id="timer"></div>
+<script src="script.js"></script>
 </body>
 </html>
