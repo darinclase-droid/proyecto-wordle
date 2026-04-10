@@ -39,17 +39,17 @@ h1 {
 }
 
 .verde {
-  background: #6aaa64;
+  background: #75bd6e;
   border: none;
 }
 
 .amarillo {
-  background: #c9b458;
+  background: #e0c85e;
   border: none;
 }
 
 .gris {
-  background: #3a3a3c;
+  background: #3e3e3f;
   border: none;
 }
 
@@ -59,7 +59,7 @@ button {
   cursor: pointer;
   border: none;
   border-radius: 6px;
-  background: #538d4e;
+  background: #75bd6e;
   color: white;
 }
 

@@ -1,4 +1,4 @@
-// ─── ESTADO GLOBAL ───────────────────────────────────────────────────────────
+// ------------------- ESTADO GLOBAL --------------------------------------------------------
 let palabras        = [];
 let palabraSecreta  = "";
 let filaActual      = 0;
@@ -14,7 +14,7 @@ let intervalo        = null;
 // Estadísticas
 let stats = JSON.parse(localStorage.getItem("wordleStats")) || { jugadas: 0, ganadas: 0 };
 
-// ─── REFERENCIAS AL DOM ───────────────────────────────────────────────────────
+// --------------------- REFERENCIAS AL DOM -----------------------------------------------------
 const tableroEl  = document.getElementById("tablero");
 const tecladoEl  = document.getElementById("teclado");
 const statsEl    = document.getElementById("stats");
@@ -44,18 +44,18 @@ function mostrarMensaje(texto, duracion = 2000) {
 // Array 2D de celdas: celdas[fila][col]
 let celdas = [];
 
-// ─── ESTADÍSTICAS ─────────────────────────────────────────────────────────────
+//---- ESTADÍSTICAS --------------------------------------------------------------
 function actualizarStats() {
   statsEl.textContent = `Jugadas: ${stats.jugadas} | Ganadas: ${stats.ganadas}`;
 }
 
-// ─── CARGA DE PALABRAS ────────────────────────────────────────────────────────
+//---- CARGA DE PALABRAS ---------------------------------------------------------
 async function cargarPalabras() {
   const res = await fetch("palabras_castellano_5_letras.json");
   palabras = await res.json();
 }
 
-// ─── TABLERO ──────────────────────────────────────────────────────────────────
+// ---- TABLERO --------------------------------------------------------------------
 function crearTablero() {
   tableroEl.innerHTML = "";
   celdas = [];
@@ -73,7 +73,7 @@ function crearTablero() {
   }
 }
 
-// ─── TECLADO ──────────────────────────────────────────────────────────────────
+// -----TECLADO ----------------------------------------------------------------------
 function crearTeclado() {
   tecladoEl.innerHTML = "";
   const layout = [
@@ -101,7 +101,7 @@ function crearTeclado() {
   });
 }
 
-// ─── PINTAR TECLA ─────────────────────────────────────────────────────────────
+// ----- PINTAR TECLA ----------------------------------------------------------------
 function pintarTecla(letra, estado) {
   const btn = tecladoEl.querySelector(`[data-letra="${letra}"]`);
   if (!btn) return;
@@ -120,13 +120,13 @@ function pintarTecla(letra, estado) {
   }
 }
 
-// ─── BOTONES DE MODO ──────────────────────────────────────────────────────────
+// ------- BOTONES DE MODO ----------------------------------------------------
 function resaltarModo() {
   document.getElementById("btn-clasico").classList.toggle("activo", !modoContrarreloj);
   document.getElementById("btn-contrarreloj").classList.toggle("activo", modoContrarreloj);
 }
 
-// ─── TEMPORIZADOR ─────────────────────────────────────────────────────────────
+// --------------------- TEMPORIZADOR ------------------------------------------------
 function iniciarTemporizador() {
   clearInterval(intervalo);
   tiempo = 60;
@@ -139,7 +139,7 @@ function iniciarTemporizador() {
     if (tiempo <= 0) {
       clearInterval(intervalo);
       juegoActivo = false;
-      mostrarMensaje("⏱ Tiempo agotado. Era: " + palabraSecreta, 4000);
+      mostrarMensaje("Se acabó! Tiempo agotado. Era: " + palabraSecreta, 4000);
     }
   }, 1000);
 }
@@ -149,7 +149,7 @@ function detenerTemporizador() {
   intervalo = null;
 }
 
-// ─── ACTIVAR MODOS ────────────────────────────────────────────────────────────
+// -------- ACTIVAR MODOS --------------------------------------------------
 function activarModoClasico() {
   modoContrarreloj = false;
   resaltarModo();
@@ -162,7 +162,7 @@ function activarContrarreloj() {
   nuevaPartida();
 }
 
-// ─── NUEVA PARTIDA ────────────────────────────────────────────────────────────
+// ---- NUEVA PARTIDA --------------------------------------------------------
 function nuevaPartida() {
   detenerTemporizador();
   filaActual  = 0;
@@ -188,7 +188,7 @@ function nuevaPartida() {
   document.activeElement.blur();
 }
 
-// ─── ESCRIBIR / BORRAR ────────────────────────────────────────────────────────
+// ------ ESCRIBIR / BORRAR ---------------------------------------------------------
 function escribirLetra(letra) {
   if (animando || !juegoActivo || letraActual >= 5) return;
   celdas[filaActual][letraActual].textContent = letra;
@@ -201,7 +201,7 @@ function borrarLetra() {
   celdas[filaActual][letraActual].textContent = "";
 }
 
-// ─── CALCULAR RESULTADOS ──────────────────────────────────────────────────────
+// ------ CALCULAR RESULTADOS --------------------------------------------------------
 function calcularResultados(intento) {
   const resultado  = Array(5).fill("gris");
   const secreta    = palabraSecreta.split("");
@@ -225,7 +225,7 @@ function calcularResultados(intento) {
   return resultado;
 }
 
-// ─── ENVIAR INTENTO ───────────────────────────────────────────────────────────
+// ------------------- ENVIAR INTENTO --------------------------------------------------------------------
 function enviarIntento() {
   if (!juegoActivo || animando || letraActual < 5) return;
 
@@ -263,7 +263,7 @@ function enviarIntento() {
       stats.ganadas++;
       localStorage.setItem("wordleStats", JSON.stringify(stats));
       actualizarStats();
-      mostrarMensaje("¡Ganaste! 🎉 Era: " + palabraSecreta, 4000);
+      mostrarMensaje("¡Has Ganado!  Era: " + palabraSecreta, 4000);
       return;
     }
 
@@ -275,7 +275,7 @@ function enviarIntento() {
       stats.jugadas++;
       localStorage.setItem("wordleStats", JSON.stringify(stats));
       actualizarStats();
-      mostrarMensaje("¡Perdiste! Era: " + palabraSecreta, 4000);
+      mostrarMensaje("¡Ha Perdido! Era: " + palabraSecreta, 4000);
       return;
     }
 
@@ -286,7 +286,7 @@ function enviarIntento() {
   }, 5 * 300 + 300);
 }
 
-// ─── TECLADO FÍSICO ───────────────────────────────────────────────────────────
+// ------------------- TECLADO FÍSICO -----------------------------------------
 document.addEventListener("keydown", e => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -299,7 +299,7 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// ─── ARRANQUE ─────────────────────────────────────────────────────────────────
+// ------ ARRANQUE ------------------------------------------------------------
 async function iniciar() {
   await cargarPalabras();
   resaltarModo();   // marcar "Modo clásico" como activo al arrancar
