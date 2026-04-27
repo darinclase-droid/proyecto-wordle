@@ -1,26 +1,141 @@
-// ------------------- ESTADO GLOBAL --------------------------------------------------------
-let palabras        = [];
+// ─── CHULETA ──────────────────────────────────────────────────────────────────
+function toggleChuleta() {
+  const panel = document.getElementById("chuleta-panel");
+  document.getElementById("chuleta-palabra").textContent = palabraSecreta || "—";
+  panel.classList.toggle("visible");
+}
+
+function cerrarChuleta() {
+  document.getElementById("chuleta-panel").classList.remove("visible");
+}
+// Se guarda en localStorage para recordarlo entre sesiones
+
+let temaActual = localStorage.getItem("wordleTema") || "noche";
+
+function aplicarTema(tema) {
+  document.documentElement.setAttribute("data-tema", tema);
+  document.getElementById("btn-tema").textContent = tema === "noche" ? "🌙" : "☀️";
+  temaActual = tema;
+  localStorage.setItem("wordleTema", tema);
+}
+
+function toggleTema() {
+  aplicarTema(temaActual === "noche" ? "dia" : "noche");
+}
+
+// ─── VALIDACIÓN CON RAE + JSON DE RESPALDO ───────────────────────────────────
+let palabras = [];
+
+async function cargarPalabras() {
+  try {
+    const res = await fetch("palabras_castellano_5_letras.json");
+    palabras = await res.json();
+  } catch (e) {
+    console.error("Error cargando JSON:", e);
+    palabras = [];
+  }
+}
+
+async function consultarRAE(palabra) {
+  const url = `https://dle.rae.es/srv/search?w=${encodeURIComponent(palabra.toLowerCase())}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const texto = await res.text();
+    if (texto.includes("No se ha encontrado")) return false;
+    return true;
+  } catch (e) {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
+async function validarPalabra(palabra) {
+  setEstadoValidacion("Comprobando en el diccionario...");
+  const resultadoRAE = await consultarRAE(palabra);
+  setEstadoValidacion("");
+  if (resultadoRAE !== null) return resultadoRAE;
+  console.warn("RAE no disponible, usando JSON de respaldo");
+  return palabras.includes(palabra);
+}
+
+function setEstadoValidacion(texto) {
+  const el = document.getElementById("ia-estado");
+  if (el) el.textContent = texto;
+}
+
+// ─── PERFILES ────────────────────────────────────────────────────────────────
+const TOTAL_PERFILES = 5;
+let perfilActual = parseInt(localStorage.getItem("wordlePerfilActual") || "0");
+
+function claveStats(idx)  { return `wordleStats_perfil${idx}`; }
+function claveNombre(idx) { return `wordleNombre_perfil${idx}`; }
+
+function getNombre(idx) {
+  return localStorage.getItem(claveNombre(idx)) || `Jugador ${idx + 1}`;
+}
+
+function getStats(idx) {
+  return JSON.parse(localStorage.getItem(claveStats(idx))) || { jugadas: 0, ganadas: 0 };
+}
+
+function guardarStats(idx, s) {
+  localStorage.setItem(claveStats(idx), JSON.stringify(s));
+}
+
+let stats = getStats(perfilActual);
+
+function renderSelect() {
+  const sel = document.getElementById("perfil-select");
+  sel.innerHTML = "";
+  for (let i = 0; i < TOTAL_PERFILES; i++) {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = getNombre(i);
+    if (i === perfilActual) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function seleccionarPerfil(idx) {
+  perfilActual = parseInt(idx);
+  localStorage.setItem("wordlePerfilActual", perfilActual);
+  stats = getStats(perfilActual);
+  nuevaPartida();
+}
+
+function editarNombrePerfil() {
+  const actual = getNombre(perfilActual);
+  const nuevo = prompt(`Nombre para "${actual}":`, actual);
+  if (nuevo !== null && nuevo.trim() !== "") {
+    localStorage.setItem(claveNombre(perfilActual), nuevo.trim().slice(0, 20));
+    renderSelect();
+  }
+}
+
+// ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 let palabraSecreta  = "";
 let filaActual      = 0;
 let letraActual     = 0;
 let juegoActivo     = false;
 let animando        = false;
 
-// Contrarreloj
 let modoContrarreloj = false;
 let tiempo           = 60;
 let intervalo        = null;
 
-// Estadísticas
-let stats = JSON.parse(localStorage.getItem("wordleStats")) || { jugadas: 0, ganadas: 0 };
+// ─── REFERENCIAS AL DOM ───────────────────────────────────────────────────────
+const tableroEl = document.getElementById("tablero");
+const tecladoEl = document.getElementById("teclado");
+const statsEl   = document.getElementById("stats");
+const timerEl   = document.getElementById("timer");
 
-// --------------------- REFERENCIAS AL DOM -----------------------------------------------------
-const tableroEl  = document.getElementById("tablero");
-const tecladoEl  = document.getElementById("teclado");
-const statsEl    = document.getElementById("stats");
-const timerEl    = document.getElementById("timer");
+let celdas = [];
 
-// Mensaje en pantalla (evita alert() que mueve el foco)
+// ─── MENSAJE EN PANTALLA ──────────────────────────────────────────────────────
 let mensajeTimeout = null;
 function mostrarMensaje(texto, duracion = 2000) {
   let msg = document.getElementById("mensaje");
@@ -32,6 +147,7 @@ function mostrarMensaje(texto, duracion = 2000) {
       background:#fff; color:#121213; padding:10px 24px;
       border-radius:6px; font-weight:bold; font-size:1rem;
       z-index:999; pointer-events:none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     `;
     document.body.appendChild(msg);
   }
@@ -41,21 +157,12 @@ function mostrarMensaje(texto, duracion = 2000) {
   mensajeTimeout = setTimeout(() => { msg.style.display = "none"; }, duracion);
 }
 
-// Array 2D de celdas: celdas[fila][col]
-let celdas = [];
-
-//---- ESTADÍSTICAS --------------------------------------------------------------
+// ─── ESTADÍSTICAS ─────────────────────────────────────────────────────────────
 function actualizarStats() {
   statsEl.textContent = `Jugadas: ${stats.jugadas} | Ganadas: ${stats.ganadas}`;
 }
 
-//---- CARGA DE PALABRAS ---------------------------------------------------------
-async function cargarPalabras() {
-  const res = await fetch("palabras_castellano_5_letras.json");
-  palabras = await res.json();
-}
-
-// ---- TABLERO --------------------------------------------------------------------
+// ─── TABLERO ──────────────────────────────────────────────────────────────────
 function crearTablero() {
   tableroEl.innerHTML = "";
   celdas = [];
@@ -73,7 +180,7 @@ function crearTablero() {
   }
 }
 
-// -----TECLADO ----------------------------------------------------------------------
+// ─── TECLADO ──────────────────────────────────────────────────────────────────
 function crearTeclado() {
   tecladoEl.innerHTML = "";
   const layout = [
@@ -86,7 +193,7 @@ function crearTeclado() {
     filaEl.className = "fila-teclado";
     fila.forEach(letra => {
       const btn = document.createElement("button");
-      btn.className = "tecla";
+      btn.className = "tecla" + (letra === "↵" || letra === "⌫" ? " tecla-ancha" : "");
       btn.textContent = letra;
       btn.dataset.letra = letra;
       btn.addEventListener("mousedown", e => e.preventDefault());
@@ -101,7 +208,7 @@ function crearTeclado() {
   });
 }
 
-// ----- PINTAR TECLA ----------------------------------------------------------------
+// ─── PINTAR TECLA ─────────────────────────────────────────────────────────────
 function pintarTecla(letra, estado) {
   const btn = tecladoEl.querySelector(`[data-letra="${letra}"]`);
   if (!btn) return;
@@ -120,17 +227,17 @@ function pintarTecla(letra, estado) {
   }
 }
 
-// ------- BOTONES DE MODO ----------------------------------------------------
+// ─── BOTONES DE MODO ──────────────────────────────────────────────────────────
 function resaltarModo() {
   document.getElementById("btn-clasico").classList.toggle("activo", !modoContrarreloj);
   document.getElementById("btn-contrarreloj").classList.toggle("activo", modoContrarreloj);
 }
 
-// --------------------- TEMPORIZADOR ------------------------------------------------
+// ─── TEMPORIZADOR ─────────────────────────────────────────────────────────────
 function iniciarTemporizador() {
   clearInterval(intervalo);
   tiempo = 60;
-  timerEl.style.color = "white";
+  timerEl.style.color = temaActual === "noche" ? "white" : "#121213";
   timerEl.textContent = `Tiempo: ${tiempo}s`;
   intervalo = setInterval(() => {
     tiempo--;
@@ -139,7 +246,7 @@ function iniciarTemporizador() {
     if (tiempo <= 0) {
       clearInterval(intervalo);
       juegoActivo = false;
-      mostrarMensaje("Se acabó! Tiempo agotado. Era: " + palabraSecreta, 4000);
+      mostrarMensaje("⏱ Tiempo agotado. Era: " + palabraSecreta, 4000);
     }
   }, 1000);
 }
@@ -149,7 +256,7 @@ function detenerTemporizador() {
   intervalo = null;
 }
 
-// -------- ACTIVAR MODOS --------------------------------------------------
+// ─── ACTIVAR MODOS ────────────────────────────────────────────────────────────
 function activarModoClasico() {
   modoContrarreloj = false;
   resaltarModo();
@@ -162,7 +269,7 @@ function activarContrarreloj() {
   nuevaPartida();
 }
 
-// ---- NUEVA PARTIDA --------------------------------------------------------
+// ─── NUEVA PARTIDA ────────────────────────────────────────────────────────────
 function nuevaPartida() {
   detenerTemporizador();
   filaActual  = 0;
@@ -172,6 +279,7 @@ function nuevaPartida() {
 
   crearTablero();
   crearTeclado();
+  cerrarChuleta();
 
   palabraSecreta = palabras[Math.floor(Math.random() * palabras.length)];
   console.log("DEBUG palabra:", palabraSecreta);
@@ -181,14 +289,14 @@ function nuevaPartida() {
   if (modoContrarreloj) {
     iniciarTemporizador();
   } else {
-    timerEl.style.color = "white";
+    timerEl.style.color = "";
     timerEl.textContent = "";
   }
 
   document.activeElement.blur();
 }
 
-// ------ ESCRIBIR / BORRAR ---------------------------------------------------------
+// ─── ESCRIBIR / BORRAR ────────────────────────────────────────────────────────
 function escribirLetra(letra) {
   if (animando || !juegoActivo || letraActual >= 5) return;
   celdas[filaActual][letraActual].textContent = letra;
@@ -201,7 +309,7 @@ function borrarLetra() {
   celdas[filaActual][letraActual].textContent = "";
 }
 
-// ------ CALCULAR RESULTADOS --------------------------------------------------------
+// ─── CALCULAR RESULTADOS ──────────────────────────────────────────────────────
 function calcularResultados(intento) {
   const resultado  = Array(5).fill("gris");
   const secreta    = palabraSecreta.split("");
@@ -225,19 +333,20 @@ function calcularResultados(intento) {
   return resultado;
 }
 
-// ------------------- ENVIAR INTENTO --------------------------------------------------------------------
-function enviarIntento() {
+// ─── ENVIAR INTENTO ───────────────────────────────────────────────────────────
+async function enviarIntento() {
   if (!juegoActivo || animando || letraActual < 5) return;
 
   let intento = "";
   for (let i = 0; i < 5; i++) intento += celdas[filaActual][i].textContent;
 
-  if (!palabras.includes(intento)) {
+  animando = true;
+  const esValida = await validarPalabra(intento);
+  if (!esValida) {
     mostrarMensaje("Palabra no válida");
+    animando = false;
     return;
   }
-
-  animando = true;
 
   const filaIdx    = filaActual;
   const filaCeldas = celdas[filaIdx];
@@ -261,9 +370,9 @@ function enviarIntento() {
       detenerTemporizador();
       stats.jugadas++;
       stats.ganadas++;
-      localStorage.setItem("wordleStats", JSON.stringify(stats));
+      guardarStats(perfilActual, stats);
       actualizarStats();
-      mostrarMensaje("¡Has Ganado!  Era: " + palabraSecreta, 4000);
+      mostrarMensaje("!HAS GANADO! Era: " + palabraSecreta, 4000);
       return;
     }
 
@@ -273,9 +382,9 @@ function enviarIntento() {
       juegoActivo = false;
       detenerTemporizador();
       stats.jugadas++;
-      localStorage.setItem("wordleStats", JSON.stringify(stats));
+      guardarStats(perfilActual, stats);
       actualizarStats();
-      mostrarMensaje("¡Ha Perdido! Era: " + palabraSecreta, 4000);
+      mostrarMensaje("¡Has Perdido! Era: " + palabraSecreta, 4000);
       return;
     }
 
@@ -286,7 +395,7 @@ function enviarIntento() {
   }, 5 * 300 + 300);
 }
 
-// ------------------- TECLADO FÍSICO -----------------------------------------
+// ─── TECLADO FÍSICO ───────────────────────────────────────────────────────────
 document.addEventListener("keydown", e => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -299,10 +408,12 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// ------ ARRANQUE ------------------------------------------------------------
+// ─── ARRANQUE ─────────────────────────────────────────────────────────────────
 async function iniciar() {
+  aplicarTema(temaActual);   // aplicar tema guardado antes de renderizar
   await cargarPalabras();
-  resaltarModo();   // marcar "Modo clásico" como activo al arrancar
+  renderSelect();
+  resaltarModo();
   nuevaPartida();
 }
 
