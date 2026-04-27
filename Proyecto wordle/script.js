@@ -1,4 +1,4 @@
-// ─── CHULETA ──────────────────────────────────────────────────────────────────
+// ─── CHULETA ─────────────────────────────────
 function toggleChuleta() {
   const panel = document.getElementById("chuleta-panel");
   document.getElementById("chuleta-palabra").textContent = palabraSecreta || "—";
@@ -67,7 +67,7 @@ function setEstadoValidacion(texto) {
   if (el) el.textContent = texto;
 }
 
-// ─── PERFILES ────────────────────────────────────────────────────────────────
+// ─── PERFILES ────────────────────────────
 const TOTAL_PERFILES = 5;
 let perfilActual = parseInt(localStorage.getItem("wordlePerfilActual") || "0");
 
@@ -116,7 +116,7 @@ function editarNombrePerfil() {
   }
 }
 
-// ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
+// ─── ESTADO GLOBAL ───────────────────────────────────────────
 let palabraSecreta  = "";
 let filaActual      = 0;
 let letraActual     = 0;
@@ -127,7 +127,7 @@ let modoContrarreloj = false;
 let tiempo           = 60;
 let intervalo        = null;
 
-// ─── REFERENCIAS AL DOM ───────────────────────────────────────────────────────
+// ─── REFERENCIAS AL DOM ──────────────────────────────────────
 const tableroEl = document.getElementById("tablero");
 const tecladoEl = document.getElementById("teclado");
 const statsEl   = document.getElementById("stats");
@@ -135,7 +135,7 @@ const timerEl   = document.getElementById("timer");
 
 let celdas = [];
 
-// ─── MENSAJE EN PANTALLA ──────────────────────────────────────────────────────
+// ─── MENSAJE EN PANTALLA ───────────────────────────────────────
 let mensajeTimeout = null;
 function mostrarMensaje(texto, duracion = 2000) {
   let msg = document.getElementById("mensaje");
@@ -157,12 +157,12 @@ function mostrarMensaje(texto, duracion = 2000) {
   mensajeTimeout = setTimeout(() => { msg.style.display = "none"; }, duracion);
 }
 
-// ─── ESTADÍSTICAS ─────────────────────────────────────────────────────────────
+// ─── ESTADÍSTICAS ────────────────────────────────────────
 function actualizarStats() {
   statsEl.textContent = `Jugadas: ${stats.jugadas} | Ganadas: ${stats.ganadas}`;
 }
 
-// ─── TABLERO ──────────────────────────────────────────────────────────────────
+// ─── TABLERO ──────────────────────────────────────────────
 function crearTablero() {
   tableroEl.innerHTML = "";
   celdas = [];
@@ -180,12 +180,12 @@ function crearTablero() {
   }
 }
 
-// ─── TECLADO ──────────────────────────────────────────────────────────────────
+// ─── TECLADO ─────────────────────────────────────────────────
 function crearTeclado() {
   tecladoEl.innerHTML = "";
   const layout = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
-    ["A","S","D","F","G","H","J","K","L"],
+    ["A","S","D","F","G","H","J","K","L","Ñ"],
     ["↵","Z","X","C","V","B","N","M","⌫"]
   ];
   layout.forEach(fila => {
@@ -208,7 +208,7 @@ function crearTeclado() {
   });
 }
 
-// ─── PINTAR TECLA ─────────────────────────────────────────────────────────────
+// ─── PINTAR TECLA ─────────────────────────────────────────
 function pintarTecla(letra, estado) {
   const btn = tecladoEl.querySelector(`[data-letra="${letra}"]`);
   if (!btn) return;
@@ -227,13 +227,13 @@ function pintarTecla(letra, estado) {
   }
 }
 
-// ─── BOTONES DE MODO ──────────────────────────────────────────────────────────
+// ─── BOTONES DE MODO ────────────────────────────────────────
 function resaltarModo() {
   document.getElementById("btn-clasico").classList.toggle("activo", !modoContrarreloj);
   document.getElementById("btn-contrarreloj").classList.toggle("activo", modoContrarreloj);
 }
 
-// ─── TEMPORIZADOR ─────────────────────────────────────────────────────────────
+// ─── TEMPORIZADOR ───────────────────────────────────────
 function iniciarTemporizador() {
   clearInterval(intervalo);
   tiempo = 60;
@@ -256,7 +256,7 @@ function detenerTemporizador() {
   intervalo = null;
 }
 
-// ─── ACTIVAR MODOS ────────────────────────────────────────────────────────────
+// ─── ACTIVAR MODOS ────────────────────────────────────────
 function activarModoClasico() {
   modoContrarreloj = false;
   resaltarModo();
@@ -269,7 +269,7 @@ function activarContrarreloj() {
   nuevaPartida();
 }
 
-// ─── NUEVA PARTIDA ────────────────────────────────────────────────────────────
+// ─── NUEVA PARTIDA ─────────────────────────────────────
 function nuevaPartida() {
   detenerTemporizador();
   filaActual  = 0;
@@ -296,7 +296,7 @@ function nuevaPartida() {
   document.activeElement.blur();
 }
 
-// ─── ESCRIBIR / BORRAR ────────────────────────────────────────────────────────
+// ─── ESCRIBIR / BORRAR ───────────────────────────────────────
 function escribirLetra(letra) {
   if (animando || !juegoActivo || letraActual >= 5) return;
   celdas[filaActual][letraActual].textContent = letra;
@@ -309,7 +309,7 @@ function borrarLetra() {
   celdas[filaActual][letraActual].textContent = "";
 }
 
-// ─── CALCULAR RESULTADOS ──────────────────────────────────────────────────────
+// ─── CALCULAR RESULTADOS ────────────────────────────────────
 function calcularResultados(intento) {
   const resultado  = Array(5).fill("gris");
   const secreta    = palabraSecreta.split("");
@@ -333,7 +333,7 @@ function calcularResultados(intento) {
   return resultado;
 }
 
-// ─── ENVIAR INTENTO ───────────────────────────────────────────────────────────
+// ─── ENVIAR INTENTO ───────────────────────────────────────────
 async function enviarIntento() {
   if (!juegoActivo || animando || letraActual < 5) return;
 
@@ -395,7 +395,7 @@ async function enviarIntento() {
   }, 5 * 300 + 300);
 }
 
-// ─── TECLADO FÍSICO ───────────────────────────────────────────────────────────
+// ─── TECLADO FÍSICO ─────────────────────────────────────────
 document.addEventListener("keydown", e => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -408,7 +408,7 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// ─── ARRANQUE ─────────────────────────────────────────────────────────────────
+// ─── ARRANQUE ────────────────────────────────────────────
 async function iniciar() {
   aplicarTema(temaActual);   // aplicar tema guardado antes de renderizar
   await cargarPalabras();
