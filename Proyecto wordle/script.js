@@ -1,4 +1,4 @@
-// ─── CHULETA ─────────────────────────────────
+// ─── CHULETA ──────────────────────────────────────────────────────────────────
 function toggleChuleta() {
   const panel = document.getElementById("chuleta-panel");
   document.getElementById("chuleta-palabra").textContent = palabraSecreta || "—";
@@ -8,8 +8,8 @@ function toggleChuleta() {
 function cerrarChuleta() {
   document.getElementById("chuleta-panel").classList.remove("visible");
 }
-// Se guarda en localStorage para recordarlo entre sesiones
 
+// ─── TEMA DÍA / NOCHE ────────────────────────────────────────────────────────
 let temaActual = localStorage.getItem("wordleTema") || "noche";
 
 function aplicarTema(tema) {
@@ -67,46 +67,61 @@ function setEstadoValidacion(texto) {
   if (el) el.textContent = texto;
 }
 
-// ─── PERFILES ────────────────────────────
-const TOTAL_PERFILES = 5;
+// ─── PERFILES ────────────────────────────────────────────────────────────────
+// Los perfiles son dinámicos: se guardan como array de IDs en localStorage.
+// Cada ID es un número único generado al crear el perfil.
+
+function getPerfilesIds() {
+  return JSON.parse(localStorage.getItem("wordlePerfilesIds") || "[0,1,2,3,4]");
+}
+
+function guardarPerfilesIds(ids) {
+  localStorage.setItem("wordlePerfilesIds", JSON.stringify(ids));
+}
+
 let perfilActual = parseInt(localStorage.getItem("wordlePerfilActual") || "0");
 
-function claveStats(idx)  { return `wordleStats_perfil${idx}`; }
-function claveNombre(idx) { return `wordleNombre_perfil${idx}`; }
+function claveStats(id)  { return `wordleStats_perfil${id}`; }
+function claveNombre(id) { return `wordleNombre_perfil${id}`; }
 
-function getNombre(idx) {
-  return localStorage.getItem(claveNombre(idx)) || `Jugador ${idx + 1}`;
+function getNombre(id) {
+  return localStorage.getItem(claveNombre(id)) || `Jugador ${id + 1}`;
 }
 
-function getStats(idx) {
-  return JSON.parse(localStorage.getItem(claveStats(idx))) || { jugadas: 0, ganadas: 0 };
+// CAMBIO 1: stats ahora incluye "derrotas"
+function getStats(id) {
+  return JSON.parse(localStorage.getItem(claveStats(id))) || { jugadas: 0, ganadas: 0, derrotas: 0 };
 }
 
-function guardarStats(idx, s) {
-  localStorage.setItem(claveStats(idx), JSON.stringify(s));
+function guardarStats(id, s) {
+  localStorage.setItem(claveStats(id), JSON.stringify(s));
 }
 
 let stats = getStats(perfilActual);
 
+// ── Renderizar select de perfiles ──────────────────────────────────────────
 function renderSelect() {
   const sel = document.getElementById("perfil-select");
   sel.innerHTML = "";
-  for (let i = 0; i < TOTAL_PERFILES; i++) {
+  const ids = getPerfilesIds();
+  ids.forEach(id => {
     const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = getNombre(i);
-    if (i === perfilActual) opt.selected = true;
+    opt.value = id;
+    opt.textContent = getNombre(id);
+    if (id === perfilActual) opt.selected = true;
     sel.appendChild(opt);
-  }
+  });
 }
 
-function seleccionarPerfil(idx) {
-  perfilActual = parseInt(idx);
+function seleccionarPerfil(id) {
+  perfilActual = parseInt(id);
   localStorage.setItem("wordlePerfilActual", perfilActual);
   stats = getStats(perfilActual);
+  actualizarStats();
   nuevaPartida();
 }
 
+// ── Editar nombre ──────────────────────────────────────────────────────────
 function editarNombrePerfil() {
   const actual = getNombre(perfilActual);
   const nuevo = prompt(`Nombre para "${actual}":`, actual);
@@ -116,7 +131,74 @@ function editarNombrePerfil() {
   }
 }
 
-// ─── ESTADO GLOBAL ───────────────────────────────────────────
+// CAMBIO 2: crear nuevo perfil
+function crearPerfil() {
+  const nombre = prompt("Nombre del nuevo perfil:", "Jugador nuevo");
+  if (nombre === null || nombre.trim() === "") return;
+
+  const ids = getPerfilesIds();
+
+  // Generar ID único (máximo existente + 1)
+  const nuevoId = ids.length > 0 ? Math.max(...ids) + 1 : 0;
+
+  localStorage.setItem(claveNombre(nuevoId), nombre.trim().slice(0, 20));
+  guardarStats(nuevoId, { jugadas: 0, ganadas: 0, derrotas: 0 });
+
+  ids.push(nuevoId);
+  guardarPerfilesIds(ids);
+
+  // Seleccionar el perfil recién creado
+  perfilActual = nuevoId;
+  localStorage.setItem("wordlePerfilActual", perfilActual);
+  stats = getStats(perfilActual);
+
+  renderSelect();
+  actualizarStats();
+  nuevaPartida();
+}
+
+// CAMBIO 2: borrar perfil actual
+function borrarPerfil() {
+  const ids = getPerfilesIds();
+
+  if (ids.length <= 1) {
+    mostrarMensaje("Debe quedar al menos un perfil", 2500);
+    return;
+  }
+
+  const nombre = getNombre(perfilActual);
+  if (!confirm(`¿Borrar el perfil "${nombre}"? Se eliminarán todas sus estadísticas.`)) return;
+
+  // Limpiar datos del perfil borrado
+  localStorage.removeItem(claveNombre(perfilActual));
+  localStorage.removeItem(claveStats(perfilActual));
+
+  // Quitarlo de la lista
+  const nuevosIds = ids.filter(id => id !== perfilActual);
+  guardarPerfilesIds(nuevosIds);
+
+  // Cambiar al primer perfil disponible
+  perfilActual = nuevosIds[0];
+  localStorage.setItem("wordlePerfilActual", perfilActual);
+  stats = getStats(perfilActual);
+
+  renderSelect();
+  actualizarStats();
+  nuevaPartida();
+}
+
+// CAMBIO 3: reiniciar estadísticas del perfil actual con confirmación
+function reiniciarStats() {
+  const nombre = getNombre(perfilActual);
+  if (!confirm(`¿Reiniciar las estadísticas de "${nombre}"?\nEsta acción no se puede deshacer.`)) return;
+
+  stats = { jugadas: 0, ganadas: 0, derrotas: 0 };
+  guardarStats(perfilActual, stats);
+  actualizarStats();
+  mostrarMensaje("Estadísticas reiniciadas", 2000);
+}
+
+// ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 let palabraSecreta  = "";
 let filaActual      = 0;
 let letraActual     = 0;
@@ -127,7 +209,7 @@ let modoContrarreloj = false;
 let tiempo           = 60;
 let intervalo        = null;
 
-// ─── REFERENCIAS AL DOM ──────────────────────────────────────
+// ─── REFERENCIAS AL DOM ───────────────────────────────────────────────────────
 const tableroEl = document.getElementById("tablero");
 const tecladoEl = document.getElementById("teclado");
 const statsEl   = document.getElementById("stats");
@@ -135,7 +217,7 @@ const timerEl   = document.getElementById("timer");
 
 let celdas = [];
 
-// ─── MENSAJE EN PANTALLA ───────────────────────────────────────
+// ─── MENSAJE EN PANTALLA ──────────────────────────────────────────────────────
 let mensajeTimeout = null;
 function mostrarMensaje(texto, duracion = 2000) {
   let msg = document.getElementById("mensaje");
@@ -157,12 +239,13 @@ function mostrarMensaje(texto, duracion = 2000) {
   mensajeTimeout = setTimeout(() => { msg.style.display = "none"; }, duracion);
 }
 
-// ─── ESTADÍSTICAS ────────────────────────────────────────
+// ─── ESTADÍSTICAS — ahora muestra también derrotas ────────────────────────────
 function actualizarStats() {
-  statsEl.textContent = `Jugadas: ${stats.jugadas} | Ganadas: ${stats.ganadas}`;
+  statsEl.textContent =
+    `Jugadas: ${stats.jugadas} | Ganadas: ${stats.ganadas} | Derrotas: ${stats.derrotas}`;
 }
 
-// ─── TABLERO ──────────────────────────────────────────────
+// ─── TABLERO ──────────────────────────────────────────────────────────────────
 function crearTablero() {
   tableroEl.innerHTML = "";
   celdas = [];
@@ -180,13 +263,13 @@ function crearTablero() {
   }
 }
 
-// ─── TECLADO ─────────────────────────────────────────────────
+// ─── TECLADO ──────────────────────────────────────────────────────────────────
 function crearTeclado() {
   tecladoEl.innerHTML = "";
   const layout = [
-    ["Q","W","E","R","T","Y","U","I","O","P"],
+    ["Q","W","E","R","T","Y","U","I","O","P","⌫"],
     ["A","S","D","F","G","H","J","K","L","Ñ"],
-    ["↵","Z","X","C","V","B","N","M","⌫"]
+    ["Z","X","C","V","B","N","M","↵"],
   ];
   layout.forEach(fila => {
     const filaEl = document.createElement("div");
@@ -208,7 +291,7 @@ function crearTeclado() {
   });
 }
 
-// ─── PINTAR TECLA ─────────────────────────────────────────
+// ─── PINTAR TECLA ─────────────────────────────────────────────────────────────
 function pintarTecla(letra, estado) {
   const btn = tecladoEl.querySelector(`[data-letra="${letra}"]`);
   if (!btn) return;
@@ -227,13 +310,13 @@ function pintarTecla(letra, estado) {
   }
 }
 
-// ─── BOTONES DE MODO ────────────────────────────────────────
+// ─── BOTONES DE MODO ──────────────────────────────────────────────────────────
 function resaltarModo() {
   document.getElementById("btn-clasico").classList.toggle("activo", !modoContrarreloj);
   document.getElementById("btn-contrarreloj").classList.toggle("activo", modoContrarreloj);
 }
 
-// ─── TEMPORIZADOR ───────────────────────────────────────
+// ─── TEMPORIZADOR ─────────────────────────────────────────────────────────────
 function iniciarTemporizador() {
   clearInterval(intervalo);
   tiempo = 60;
@@ -246,6 +329,11 @@ function iniciarTemporizador() {
     if (tiempo <= 0) {
       clearInterval(intervalo);
       juegoActivo = false;
+      // CAMBIO 1: contabilizar derrota por tiempo agotado
+      stats.jugadas++;
+      stats.derrotas++;
+      guardarStats(perfilActual, stats);
+      actualizarStats();
       mostrarMensaje("⏱ Tiempo agotado. Era: " + palabraSecreta, 4000);
     }
   }, 1000);
@@ -256,7 +344,7 @@ function detenerTemporizador() {
   intervalo = null;
 }
 
-// ─── ACTIVAR MODOS ────────────────────────────────────────
+// ─── ACTIVAR MODOS ────────────────────────────────────────────────────────────
 function activarModoClasico() {
   modoContrarreloj = false;
   resaltarModo();
@@ -269,7 +357,7 @@ function activarContrarreloj() {
   nuevaPartida();
 }
 
-// ─── NUEVA PARTIDA ─────────────────────────────────────
+// ─── NUEVA PARTIDA ────────────────────────────────────────────────────────────
 function nuevaPartida() {
   detenerTemporizador();
   filaActual  = 0;
@@ -296,7 +384,7 @@ function nuevaPartida() {
   document.activeElement.blur();
 }
 
-// ─── ESCRIBIR / BORRAR ───────────────────────────────────────
+// ─── ESCRIBIR / BORRAR ────────────────────────────────────────────────────────
 function escribirLetra(letra) {
   if (animando || !juegoActivo || letraActual >= 5) return;
   celdas[filaActual][letraActual].textContent = letra;
@@ -309,7 +397,7 @@ function borrarLetra() {
   celdas[filaActual][letraActual].textContent = "";
 }
 
-// ─── CALCULAR RESULTADOS ────────────────────────────────────
+// ─── CALCULAR RESULTADOS ──────────────────────────────────────────────────────
 function calcularResultados(intento) {
   const resultado  = Array(5).fill("gris");
   const secreta    = palabraSecreta.split("");
@@ -333,7 +421,7 @@ function calcularResultados(intento) {
   return resultado;
 }
 
-// ─── ENVIAR INTENTO ───────────────────────────────────────────
+// ─── ENVIAR INTENTO ───────────────────────────────────────────────────────────
 async function enviarIntento() {
   if (!juegoActivo || animando || letraActual < 5) return;
 
@@ -372,7 +460,7 @@ async function enviarIntento() {
       stats.ganadas++;
       guardarStats(perfilActual, stats);
       actualizarStats();
-      mostrarMensaje("!HAS GANADO! Era: " + palabraSecreta, 4000);
+      mostrarMensaje("¡Ganaste! 🎉 Era: " + palabraSecreta, 4000);
       return;
     }
 
@@ -381,10 +469,12 @@ async function enviarIntento() {
     if (siguienteFila >= 6) {
       juegoActivo = false;
       detenerTemporizador();
+      // CAMBIO 1: contabilizar derrota al agotar los 6 intentos
       stats.jugadas++;
+      stats.derrotas++;
       guardarStats(perfilActual, stats);
       actualizarStats();
-      mostrarMensaje("¡Has Perdido! Era: " + palabraSecreta, 4000);
+      mostrarMensaje("¡Perdiste! Era: " + palabraSecreta, 4000);
       return;
     }
 
@@ -395,7 +485,7 @@ async function enviarIntento() {
   }, 5 * 300 + 300);
 }
 
-// ─── TECLADO FÍSICO ─────────────────────────────────────────
+// ─── TECLADO FÍSICO ───────────────────────────────────────────────────────────
 document.addEventListener("keydown", e => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -408,9 +498,9 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// ─── ARRANQUE ────────────────────────────────────────────
+// ─── ARRANQUE ─────────────────────────────────────────────────────────────────
 async function iniciar() {
-  aplicarTema(temaActual);   // aplicar tema guardado antes de renderizar
+  aplicarTema(temaActual);
   await cargarPalabras();
   renderSelect();
   resaltarModo();
