@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="noche">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wordle PRO</title>
+  <style>
+
+    /* ── Variables de tema ───────────────────────────────────────── */
+    :root {
+      --bg:          #121213;
+      --bg2:         #1a1a1b;
+      --texto:       #ffffff;
+      --texto-suave: #888888;
+      --borde:       #3a3a3c;
+      --tecla-bg:    #818384;
+      --btn-bg:      #2a2a2c;
+      --btn-hover:   #3a3a3c;
+    }
+
+    [data-tema="dia"] {
+      --bg:          #f9f9f9;
+      --bg2:         #ffffff;
+      --texto:       #121213;
+      --texto-suave: #666666;
+      --borde:       #d3d6da;
+      --tecla-bg:    #d3d6da;
+      --btn-bg:      #e9e9e9;
+      --btn-hover:   #d3d6da;
+    }
+
+    /* ── Reset y base ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--texto);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 12px 16px 24px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ── Cabecera ────────────────────────────────────────────────── */
+    #cabecera {
+      width: 100%;
+      max-width: 600px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--borde);
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    #btn-tema {
+      justify-self: start;
+      background: var(--btn-bg);
+      border: 1px solid var(--borde);
+      border-radius: 20px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      color: var(--texto);
+      transition: background 0.3s, border-color 0.3s;
+      white-space: nowrap;
+    }
+    #btn-tema:hover { background: var(--btn-hover); opacity: 1; }
+
+    h1 {
+      justify-self: center;
+      font-size: clamp(1.2rem, 5vw, 1.8rem);
+      white-space: nowrap;
+    }
+
+    /* ── Selector de perfil (derecha) ────────────────────────────── */
+    #perfil-wrapper {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    #perfil-select {
+      background: var(--btn-bg);
+      border: 1px solid var(--borde);
+      border-radius: 6px;
+      color: var(--texto);
+      padding: 5px 8px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      max-width: 110px;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
+    }
+    #perfil-select option { background: var(--btn-bg); color: var(--texto); }
+
+    /* Botones pequeños de gestión de perfil */
+    .btn-perfil {
+      background: var(--btn-bg);
+      border: 1px solid var(--borde);
+      border-radius: 6px;
+      color: var(--texto-suave);
+      padding: 5px 7px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.3s, color 0.3s;
+      margin: 0;
+      line-height: 1;
+    }
+    .btn-perfil:hover        { background: var(--btn-hover); color: var(--texto); opacity: 1; }
+    .btn-perfil.btn-crear    { color: #6aaa64; border-color: #6aaa64; }
+    .btn-perfil.btn-crear:hover { background: #6aaa64; color: white; }
+    .btn-perfil.btn-borrar   { color: #c04040; border-color: #c04040; }
+    .btn-perfil.btn-borrar:hover { background: #c04040; color: white; }
+    .btn-perfil.btn-reiniciar { color: #b59f3b; border-color: #b59f3b; }
+    .btn-perfil.btn-reiniciar:hover { background: #b59f3b; color: white; }
+
+    /* ── Estado validación ───────────────────────────────────────── */
+    #ia-estado {
+      font-size: 0.78rem;
+      color: var(--texto-suave);
+      height: 16px;
+      margin: 4px 0;
+      text-align: center;
+    }
+
+    /* ── Stats ───────────────────────────────────────────────────── */
+    #stats {
+      font-size: 0.85rem;
+      color: var(--texto-suave);
+      margin: 4px 0 8px;
+      text-align: center;
+    }
+
+    /* ── Botón nueva partida ─────────────────────────────────────── */
+    #btn-nueva {
+      background: #538d4e;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 22px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin: 4px 0 8px;
+      transition: opacity 0.2s;
+    }
+    #btn-nueva:hover { opacity: 0.88; }
+
+    /* ── Tablero ─────────────────────────────────────────────────── */
+    #tablero {
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: clamp(4px, 1.2vw, 6px);
+      margin: 12px 0;
+    }
+
+    .fila {
+      display: grid;
+      grid-template-columns: repeat(5, var(--celda));
+      gap: clamp(4px, 1.2vw, 6px);
+    }
+
+    :root { --celda: clamp(44px, 12vw, 62px); }
+
+    .celda {
+      width:  var(--celda);
+      height: var(--celda);
+      border: 2px solid var(--borde);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: clamp(1.3rem, 5vw, 2rem);
+      font-weight: bold;
+      text-transform: uppercase;
+      transition: transform 0.3s, border-color 0.3s;
+      color: var(--texto);
+      background: transparent;
+    }
+
+    .flip { transform: rotateX(360deg); }
+
+    .verde    { background: #6aaa64 !important; border-color: #6aaa64 !important; color: #fff !important; }
+    .amarillo { background: #c9b458 !important; border-color: #c9b458 !important; color: #fff !important; }
+    .gris     { background: #787c7e !important; border-color: #787c7e !important; color: #fff !important; }
+
+    /* ── Teclado ─────────────────────────────────────────────────── */
+    #teclado { margin-top: 8px; width: 100%; max-width: 500px; }
+
+    .fila-teclado {
+      display: flex;
+      justify-content: center;
+      gap: clamp(3px, 1vw, 6px);
+      margin-bottom: clamp(3px, 1vw, 6px);
+    }
+
+    .tecla {
+      flex: 1;
+      max-width: clamp(28px, 8vw, 43px);
+      height: clamp(44px, 10vw, 58px);
+      background: var(--tecla-bg);
+      border: none;
+      border-radius: 4px;
+      color: var(--texto);
+      font-size: clamp(0.65rem, 2.5vw, 0.85rem);
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.3s, color 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tecla-ancha { max-width: clamp(42px, 11vw, 65px); font-size: clamp(0.55rem, 2vw, 0.75rem); }
+
+    .tecla.verde    { background: #6aaa64; color: white; }
+    .tecla.amarillo { background: #c9b458; color: white; }
+    .tecla.gris     { background: #787c7e; color: white; }
+
+    /* ── Botones de modo ─────────────────────────────────────────── */
+    #botones-modo {
+      display: flex;
+      gap: 10px;
+      margin: 12px 0 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-modo {
+      border: none;
+      border-radius: 6px;
+      padding: 9px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: white;
+      transition: opacity 0.2s;
+      margin: 0;
+    }
+    .btn-modo:hover { opacity: 0.88; }
+    #btn-clasico      { background: #538d4e; }
+    #btn-contrarreloj { background: #b59f3b; }
+    #btn-clasico.activo      { outline: 3px solid var(--texto); }
+    #btn-contrarreloj.activo { outline: 3px solid var(--texto); }
+
+    /* ── Timer ───────────────────────────────────────────────────── */
+    #timer {
+      font-size: 1rem;
+      font-weight: bold;
+      margin-top: 6px;
+      text-align: center;
+      min-height: 24px;
+    }
+
+    /* ── Chuleta ─────────────────────────────────────────────────── */
+    #chuleta-wrapper {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      z-index: 500;
+    }
+
+    #chuleta-panel {
+      display: none;
+      background: var(--bg2);
+      border: 1px solid var(--borde);
+      border-radius: 10px;
+      padding: 14px 20px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      animation: fadeIn 0.2s ease;
+    }
+
+    #chuleta-panel p {
+      font-size: 0.75rem;
+      color: var(--texto-suave);
+      margin-bottom: 6px;
+    }
+
+    #chuleta-palabra {
+      font-size: 1.6rem;
+      font-weight: bold;
+      letter-spacing: 6px;
+      color: #c9b458;
+      text-transform: uppercase;
+    }
+
+    #chuleta-panel.visible { display: block; }
+
+    #btn-chuleta {
+      background: #b59f3b;
+      border: none;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    #btn-chuleta:hover { transform: scale(1.1); opacity: 1; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 360px) {
+      :root { --celda: 44px; }
+      .tecla { max-width: 26px; height: 42px; }
+      .tecla-ancha { max-width: 40px; }
+      h1 { font-size: 1.1rem; }
+      .btn-perfil { padding: 4px 5px; font-size: 0.75rem; }
+    }
+
+    @media (min-width: 600px) {
+      :root { --celda: 62px; }
+      .tecla { max-width: 43px; height: 58px; }
+      .tecla-ancha { max-width: 65px; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Cabecera: tema | título | perfil -->
+  <header id="cabecera">
+    <button id="btn-tema" onclick="toggleTema()">🌙</button>
+    <h1>Wordle PRO</h1>
+    <div id="perfil-wrapper">
+      <select id="perfil-select" onchange="seleccionarPerfil(this.value)"></select>
+      <button class="btn-perfil" onclick="editarNombrePerfil()" title="Editar nombre">✎</button>
+      <button class="btn-perfil btn-crear"    onclick="crearPerfil()"    title="Nuevo perfil">＋</button>
+      <button class="btn-perfil btn-borrar"   onclick="borrarPerfil()"   title="Borrar perfil">🗑</button>
+      <button class="btn-perfil btn-reiniciar" onclick="reiniciarStats()" title="Reiniciar estadísticas">↺</button>
+    </div>
+  </header>
+
+  <div id="ia-estado"></div>
+  <button id="btn-nueva" onclick="nuevaPartida()">Nueva partida</button>
+  <div id="stats"></div>
+
+  <div id="tablero"></div>
+  <div id="teclado"></div>
+
+  <div id="botones-modo">
+    <button id="btn-clasico"      class="btn-modo" onclick="activarModoClasico()">Modo clásico</button>
+    <button id="btn-contrarreloj" class="btn-modo" onclick="activarContrarreloj()">Modo contrarreloj</button>
+  </div>
+  <div id="timer"></div>
+
+  <!-- Chuleta -->
+  <div id="chuleta-wrapper">
+    <div id="chuleta-panel">
+      <p>Palabra secreta</p>
+      <div id="chuleta-palabra">—</div>
+    </div>
+    <button id="btn-chuleta" onclick="toggleChuleta()" title="Ver palabra secreta">💡</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
