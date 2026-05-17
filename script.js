@@ -14,7 +14,7 @@ let temaActual = localStorage.getItem("wordleTema") || "noche";
 
 function aplicarTema(tema) {
   document.documentElement.setAttribute("data-tema", tema);
-  document.getElementById("btn-tema").textContent = tema === "noche" ? "🌙" : "☀️";
+  document.getElementById("btn-tema").textContent = tema === "noche" ? "🌚" : "🌞";
   temaActual = tema;
   localStorage.setItem("wordleTema", tema);
 }
@@ -460,7 +460,7 @@ async function enviarIntento() {
       stats.ganadas++;
       guardarStats(perfilActual, stats);
       actualizarStats();
-      mostrarMensaje("¡Ganaste! 🎉 Era: " + palabraSecreta, 4000);
+      mostrarMensaje("¡HAS GANADO! Era: " + palabraSecreta, 4000);
       return;
     }
 
@@ -474,7 +474,7 @@ async function enviarIntento() {
       stats.derrotas++;
       guardarStats(perfilActual, stats);
       actualizarStats();
-      mostrarMensaje("¡Perdiste! Era: " + palabraSecreta, 4000);
+      mostrarMensaje("¡HAS PERDIDO! Era: " + palabraSecreta, 4000);
       return;
     }
 
