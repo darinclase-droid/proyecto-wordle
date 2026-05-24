@@ -1,16 +1,28 @@
-// ─── CHULETA ──────────────────────────────────────────────────────────────────
+// CHULETA
+// Botón fijo en la esquina inferior derecha. Al hacer clic alterna
+// la visibilidad del panel añadiendo/quitando la clase CSS "visible".
+
 function toggleChuleta() {
   const panel = document.getElementById("chuleta-panel");
+  // Actualizar el texto ANTES de mostrar el panel para garantizar
+  // que siempre muestra la palabra de la partida actual.
+  // El operador || "—" evita mostrar "undefined" si aún no hay palabra.
+
   document.getElementById("chuleta-palabra").textContent = palabraSecreta || "—";
-  panel.classList.toggle("visible");
+  
+  panel.classList.toggle("visible");  // classList.toggle añade "visible" si no está, la quita si está.
 }
 
 function cerrarChuleta() {
+  // Se llama desde nuevaPartida() para evitar que al iniciar una partida
+  // nueva la chuleta quede abierta mostrando la palabra anterior.
   document.getElementById("chuleta-panel").classList.remove("visible");
 }
 
-// ─── TEMA DÍA / NOCHE ────────────────────────────────────────────────────────
-let temaActual = localStorage.getItem("wordleTema") || "noche";
+// TEMA DÍA / NOCHE
+// El tema se almacena en localStorage para recordarlo entre sesiones.
+// El cambio visual lo gestiona el CSS mediante el atributo data-tema en <html>.
+let temaActual = localStorage.getItem("wordleTema") || "noche"; // Lee el tema guardado; si no existe, usar "noche" como predeterminado.
 
 function aplicarTema(tema) {
   document.documentElement.setAttribute("data-tema", tema);
@@ -23,7 +35,11 @@ function toggleTema() {
   aplicarTema(temaActual === "noche" ? "dia" : "noche");
 }
 
-// ─── VALIDACIÓN CON RAE + JSON DE RESPALDO ───────────────────────────────────
+// VALIDACIÓN CON DICCIONARIO JSON 
+// La API de la RAE ha sido descartada en producción por restricciones CORS:
+// dle.rae.es bloquea peticiones fetch desde dominios externos (GitHub Pages),
+// devolviendo NetworkError. La validación se realiza contra el JSON local
+// con 836 palabras curadas del diccionario Hunspell es_ES oficial.
 let palabras = [];
 
 async function cargarPalabras() {
@@ -36,38 +52,11 @@ async function cargarPalabras() {
   }
 }
 
-async function consultarRAE(palabra) {
-  const url = `https://dle.rae.es/srv/search?w=${encodeURIComponent(palabra.toLowerCase())}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!res.ok) return null;
-    const texto = await res.text();
-    if (texto.includes("No se ha encontrado")) return false;
-    return true;
-  } catch (e) {
-    clearTimeout(timeout);
-    return null;
-  }
-}
-
-async function validarPalabra(palabra) {
-  setEstadoValidacion("Comprobando en el diccionario...");
-  const resultadoRAE = await consultarRAE(palabra);
-  setEstadoValidacion("");
-  if (resultadoRAE !== null) return resultadoRAE;
-  console.warn("RAE no disponible, usando JSON de respaldo");
+function validarPalabra(palabra) {
   return palabras.includes(palabra);
 }
 
-function setEstadoValidacion(texto) {
-  const el = document.getElementById("ia-estado");
-  if (el) el.textContent = texto;
-}
-
-// ─── PERFILES ────────────────────────────────────────────────────────────────
+// PERFILES 
 // Los perfiles son dinámicos: se guardan como array de IDs en localStorage.
 // Cada ID es un número único generado al crear el perfil.
 
@@ -88,7 +77,7 @@ function getNombre(id) {
   return localStorage.getItem(claveNombre(id)) || `Jugador ${id + 1}`;
 }
 
-// CAMBIO 1: stats ahora incluye "derrotas"
+// ESTADISTICAS (Stats)
 function getStats(id) {
   return JSON.parse(localStorage.getItem(claveStats(id))) || { jugadas: 0, ganadas: 0, derrotas: 0 };
 }
@@ -99,7 +88,7 @@ function guardarStats(id, s) {
 
 let stats = getStats(perfilActual);
 
-// ── Renderizar select de perfiles ──────────────────────────────────────────
+// Renderizar select de perfiles 
 function renderSelect() {
   const sel = document.getElementById("perfil-select");
   sel.innerHTML = "";
@@ -121,7 +110,7 @@ function seleccionarPerfil(id) {
   nuevaPartida();
 }
 
-// ── Editar nombre ──────────────────────────────────────────────────────────
+//  Editar nombre
 function editarNombrePerfil() {
   const actual = getNombre(perfilActual);
   const nuevo = prompt(`Nombre para "${actual}":`, actual);
@@ -131,7 +120,7 @@ function editarNombrePerfil() {
   }
 }
 
-// CAMBIO 2: crear nuevo perfil
+// Crear nuevo perfil
 function crearPerfil() {
   const nombre = prompt("Nombre del nuevo perfil:", "Jugador nuevo");
   if (nombre === null || nombre.trim() === "") return;
@@ -157,7 +146,7 @@ function crearPerfil() {
   nuevaPartida();
 }
 
-// CAMBIO 2: borrar perfil actual
+// Borrar perfil actual
 function borrarPerfil() {
   const ids = getPerfilesIds();
 
@@ -187,7 +176,7 @@ function borrarPerfil() {
   nuevaPartida();
 }
 
-// CAMBIO 3: reiniciar estadísticas del perfil actual con confirmación
+// Reiniciar estadísticas del perfil actual con confirmación
 function reiniciarStats() {
   const nombre = getNombre(perfilActual);
   if (!confirm(`¿Reiniciar las estadísticas de "${nombre}"?\nEsta acción no se puede deshacer.`)) return;
@@ -198,18 +187,19 @@ function reiniciarStats() {
   mostrarMensaje("Estadísticas reiniciadas", 2000);
 }
 
-// ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
+// ESTADO GLOBAL
 let palabraSecreta  = "";
 let filaActual      = 0;
 let letraActual     = 0;
 let juegoActivo     = false;
 let animando        = false;
+let tokenPartida    = 0;     // se incrementa en cada nuevaPartida(); los setTimeout lo comparan para saber si su partida sigue activa
 
 let modoContrarreloj = false;
 let tiempo           = 60;
 let intervalo        = null;
 
-// ─── REFERENCIAS AL DOM ───────────────────────────────────────────────────────
+// REFERENCIAS AL DOM
 const tableroEl = document.getElementById("tablero");
 const tecladoEl = document.getElementById("teclado");
 const statsEl   = document.getElementById("stats");
@@ -217,7 +207,7 @@ const timerEl   = document.getElementById("timer");
 
 let celdas = [];
 
-// ─── MENSAJE EN PANTALLA ──────────────────────────────────────────────────────
+// MENSAJE EN PANTALLA 
 let mensajeTimeout = null;
 function mostrarMensaje(texto, duracion = 2000) {
   let msg = document.getElementById("mensaje");
@@ -239,13 +229,13 @@ function mostrarMensaje(texto, duracion = 2000) {
   mensajeTimeout = setTimeout(() => { msg.style.display = "none"; }, duracion);
 }
 
-// ─── ESTADÍSTICAS — ahora muestra también derrotas ────────────────────────────
+// ESTADÍSTICAS
 function actualizarStats() {
   statsEl.textContent =
     `Jugadas: ${stats.jugadas} | Ganadas: ${stats.ganadas} | Derrotas: ${stats.derrotas}`;
 }
 
-// ─── TABLERO ──────────────────────────────────────────────────────────────────
+// TABLERO
 function crearTablero() {
   tableroEl.innerHTML = "";
   celdas = [];
@@ -263,35 +253,60 @@ function crearTablero() {
   }
 }
 
-// ─── TECLADO ──────────────────────────────────────────────────────────────────
+// 10. CONSTRUCCIÓN DEL TECLADO VIRTUAL
+// 
+// Tres filas tipo teclado genérico español:
+//   Fila 1: Q W E R T Y U I O P ⌫
+//   Fila 2: A S D F G H J K L Ñ ⏎
+//   Fila 3:   Z X C V B N M
+// ⌫ y ⏎ están integradas en sus filas (no en fila propia)
+// y reciben la clase .tecla-ancha para ser más anchas que el resto.
+
 function crearTeclado() {
   tecladoEl.innerHTML = "";
+
   const layout = [
     ["Q","W","E","R","T","Y","U","I","O","P","⌫"],
-    ["A","S","D","F","G","H","J","K","L","Ñ"],
-    ["Z","X","C","V","B","N","M","↵"],
+    ["A","S","D","F","G","H","J","K","L","Ñ","⏎"],
+    ["Z","X","C","V","B","N","M"]
+    // Nota: se eliminó la coma inicial de esta fila ([,"Z"...])
+    // que creaba un elemento undefined y rompía el forEach
   ];
+
   layout.forEach(fila => {
     const filaEl = document.createElement("div");
     filaEl.className = "fila-teclado";
+
     fila.forEach(letra => {
       const btn = document.createElement("button");
-      btn.className = "tecla" + (letra === "↵" || letra === "⌫" ? " tecla-ancha" : "");
+
+      // ⌫ y ⏎ reciben la clase adicional tecla-ancha para ser más anchas
+      btn.className = "tecla" + (letra === "⏎" || letra === "⌫" ? " tecla-ancha" : "");
       btn.textContent = letra;
+
+      // data-letra permite localizar la tecla desde pintarTecla()
+      // con querySelector('[data-letra="X"]') sin necesidad de IDs
       btn.dataset.letra = letra;
+
+      // mousedown con preventDefault: evita que el botón reciba el foco
+      // al hacer clic, lo que causaría que el siguiente Enter del teclado
+      // físico activara el botón en lugar de llamar a enviarIntento()
       btn.addEventListener("mousedown", e => e.preventDefault());
+
       btn.addEventListener("click", () => {
-        if      (letra === "↵") enviarIntento();
+        if      (letra === "⏎") enviarIntento();
         else if (letra === "⌫") borrarLetra();
         else                    escribirLetra(letra);
       });
+
       filaEl.appendChild(btn);
     });
+
     tecladoEl.appendChild(filaEl);
   });
 }
 
-// ─── PINTAR TECLA ─────────────────────────────────────────────────────────────
+// PINTAR TECLA
 function pintarTecla(letra, estado) {
   const btn = tecladoEl.querySelector(`[data-letra="${letra}"]`);
   if (!btn) return;
@@ -310,13 +325,13 @@ function pintarTecla(letra, estado) {
   }
 }
 
-// ─── BOTONES DE MODO ──────────────────────────────────────────────────────────
+// BOTONES DE MODO
 function resaltarModo() {
   document.getElementById("btn-clasico").classList.toggle("activo", !modoContrarreloj);
   document.getElementById("btn-contrarreloj").classList.toggle("activo", modoContrarreloj);
 }
 
-// ─── TEMPORIZADOR ─────────────────────────────────────────────────────────────
+// TEMPORIZADOR 
 function iniciarTemporizador() {
   clearInterval(intervalo);
   tiempo = 60;
@@ -334,7 +349,7 @@ function iniciarTemporizador() {
       stats.derrotas++;
       guardarStats(perfilActual, stats);
       actualizarStats();
-      mostrarMensaje("⏱ Tiempo agotado. Era: " + palabraSecreta, 4000);
+      mostrarMensaje("EL TIEMPO SE HA AGOTADO!. Era: " + palabraSecreta, 4000);
     }
   }, 1000);
 }
@@ -344,7 +359,7 @@ function detenerTemporizador() {
   intervalo = null;
 }
 
-// ─── ACTIVAR MODOS ────────────────────────────────────────────────────────────
+// ACTIVAR MODOS 
 function activarModoClasico() {
   modoContrarreloj = false;
   resaltarModo();
@@ -357,9 +372,10 @@ function activarContrarreloj() {
   nuevaPartida();
 }
 
-// ─── NUEVA PARTIDA ────────────────────────────────────────────────────────────
+// NUEVA PARTIDA 
 function nuevaPartida() {
   detenerTemporizador();
+  tokenPartida++;          // invalidar todos los setTimeout de la partida anterior
   filaActual  = 0;
   letraActual = 0;
   animando    = false;
@@ -384,7 +400,7 @@ function nuevaPartida() {
   document.activeElement.blur();
 }
 
-// ─── ESCRIBIR / BORRAR ────────────────────────────────────────────────────────
+// ESCRIBIR / BORRAR
 function escribirLetra(letra) {
   if (animando || !juegoActivo || letraActual >= 5) return;
   celdas[filaActual][letraActual].textContent = letra;
@@ -397,7 +413,7 @@ function borrarLetra() {
   celdas[filaActual][letraActual].textContent = "";
 }
 
-// ─── CALCULAR RESULTADOS ──────────────────────────────────────────────────────
+// CALCULAR RESULTADOS
 function calcularResultados(intento) {
   const resultado  = Array(5).fill("gris");
   const secreta    = palabraSecreta.split("");
@@ -421,36 +437,39 @@ function calcularResultados(intento) {
   return resultado;
 }
 
-// ─── ENVIAR INTENTO ───────────────────────────────────────────────────────────
-async function enviarIntento() {
+// ENVIAR INTENTO
+function enviarIntento() {
   if (!juegoActivo || animando || letraActual < 5) return;
 
   let intento = "";
   for (let i = 0; i < 5; i++) intento += celdas[filaActual][i].textContent;
 
   animando = true;
-  const esValida = await validarPalabra(intento);
+  const esValida = validarPalabra(intento);
   if (!esValida) {
     mostrarMensaje("Palabra no válida");
     animando = false;
     return;
   }
 
-  const filaIdx    = filaActual;
-  const filaCeldas = celdas[filaIdx];
-  const resultados = calcularResultados(intento);
+  const filaIdx       = filaActual;
+  const filaCeldas    = celdas[filaIdx];
+  const resultados    = calcularResultados(intento);
+  const tokenActual   = tokenPartida; // capturar el token de ESTA partida
 
   for (let i = 0; i < 5; i++) {
     const celda  = filaCeldas[i];
     const estado = resultados[i];
     const letra  = intento[i];
     setTimeout(() => {
+      if (tokenPartida !== tokenActual) return; // partida cancelada: ignorar
       celda.classList.add("flip", estado);
       pintarTecla(letra, estado);
     }, i * 300);
   }
 
   setTimeout(() => {
+    if (tokenPartida !== tokenActual) return; // partida cancelada: ignorar
     animando = false;
 
     if (intento === palabraSecreta) {
@@ -485,7 +504,7 @@ async function enviarIntento() {
   }, 5 * 300 + 300);
 }
 
-// ─── TECLADO FÍSICO ───────────────────────────────────────────────────────────
+// TECLADO FÍSICO
 document.addEventListener("keydown", e => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -498,7 +517,7 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// ─── ARRANQUE ─────────────────────────────────────────────────────────────────
+// ARRANQUE
 async function iniciar() {
   aplicarTema(temaActual);
   await cargarPalabras();

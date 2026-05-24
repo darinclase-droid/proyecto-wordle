@@ -1,50 +1,112 @@
 <!DOCTYPE html>
+<!--
+  Wordle PRO — index.html
+  Autor: Darín Atanasov Atanasov
+  IES Matemático Puig Adam · DAW 2025-2026
+                                                                 
+  Este fichero contiene la estructura HTML de la aplicación
+  y todos los estilos CSS embebidos. No depende de ningún
+  fichero CSS externo. La lógica del juego está en script.js.
+-->
+
 <html lang="es" data-tema="noche">
+  <!--
+    El atributo lang="es" indica al navegador y a los lectores
+    de pantalla que el contenido está en español.
+
+    El atributo data-tema="noche" es el mecanismo del sistema de
+    temas: cuando JavaScript cambia su valor a "dia", el bloque
+    CSS [data-tema="dia"] se activa automáticamente en toda la página.
+    El valor inicial "noche" define el tema por defecto.
+  -->
+
 <head>
+  <!-- Codificación UTF-8: necesaria para mostrar tildes, ñ y emojis -->
   <meta charset="UTF-8">
+
+  <!--
+    Viewport responsive: indica al navegador móvil que use el ancho
+    real del dispositivo en lugar de simular un escritorio de 980px.
+    Sin esta línea, el diseño responsive con clamp() no funcionaría
+    correctamente en móvil.
+  -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Wordle PRO</title>
+
   <style>
 
-    /* ── Variables de tema ───────────────────────────────────────── */
+    /* SISTEMA DE TEMAS DÍA / NOCHE — Variables CSS (custom properties)
+      
+       Se definen dos conjuntos de variables:
+       - :root → valores del tema noche (predeterminado)
+       - [data-tema="dia"] → valores que sobreescriben :root cuando
+          JavaScript cambia el atributo data-tema en <html>.
+
+       Ventaja: cambiar el tema requiere una sola operación en JS
+       (setAttribute) y el navegador propaga todos los colores
+       automáticamente a traves del árbol CSS.
+    */
+
+    /* Tema noche (valores por defecto) */
     :root {
-      --bg:          #121213;
-      --bg2:         #1a1a1b;
-      --texto:       #ffffff;
-      --texto-suave: #888888;
-      --borde:       #3a3a3c;
-      --tecla-bg:    #818384;
-      --btn-bg:      #2a2a2c;
-      --btn-hover:   #3a3a3c;
+      --bg:          #121213;   /* fondo principal de la página */
+      --bg2:         #1a1a1b;   /* fondo de paneles secundarios (chuleta) */
+      --texto:       #ffffff;   /* color de texto principal */
+      --texto-suave: #888888;   /* color de texto secundario / subtítulos */
+      --borde:       #3a3a3c;   /* color de bordes de celdas y botones */
+      --tecla-bg:    #818384;   /* fondo de las teclas del teclado virtual */
+      --btn-bg:      #2a2a2c;   /* fondo de botones de control (perfil, tema) */
+      --btn-hover:   #3a3a3c;   /* fondo de botones al pasar el ratón */
     }
 
+    /* Tema día: sobreescribe las variables cuando data-tema="dia" */
     [data-tema="dia"] {
-      --bg:          #f9f9f9;
+      --bg:          #fdf5f0d0; /* lo mismo que arriba*/
       --bg2:         #ffffff;
       --texto:       #121213;
       --texto-suave: #666666;
-      --borde:       #d3d6da;
+      --borde:       #abadaf;
       --tecla-bg:    #d3d6da;
       --btn-bg:      #e9e9e9;
       --btn-hover:   #d3d6da;
     }
 
-    /* ── Reset y base ────────────────────────────────────────────── */
+    /*  RESET Y ESTILOS BASE
+
+       box-sizing: border-box hace que el padding y el border se
+       incluyan dentro del width/height declarado, evitando
+       desbordamientos inesperados.
+       margin: 0 y padding: 0 eliminan los estilos por defecto
+       del navegador para tener control total del diseño.
+    */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: Arial, sans-serif;
-      background: var(--bg);
+      background: var(--bg);          /* usa la variable de tema */
       color: var(--texto);
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
+      flex-direction: column;         /* apila los elementos verticalmente */
+      align-items: center;            /* centra horizontalmente todo el contenido */
+      min-height: 100vh;              /* ocupa al menos toda la altura de la pantalla */
       padding: 12px 16px 24px;
+      /* transition en background y color: suaviza el cambio entre temas (0.3s) */
       transition: background 0.3s, color 0.3s;
     }
 
-    /* ── Cabecera ────────────────────────────────────────────────── */
+    /*
+       CABECERA — Grid de tres columnas
+
+       grid-template-columns: 1fr auto 1fr es el patrón clave:
+       - Columna izquierda (1fr): botón de tema, crece lo que pueda
+       - Columna central (auto): título h1, ocupa solo su contenido
+       - Columna derecha (1fr): selector de perfil, crece lo que pueda
+
+       Esto garantiza que el título quede SIEMPRE perfectamente centrado
+       independientemente del tamaño de los controles laterales.
+       Con flexbox esto no sería posible sin trucos adicionales.
+    */
     #cabecera {
       width: 100%;
       max-width: 600px;
@@ -57,11 +119,12 @@
       gap: 8px;
     }
 
+    /* Botón de cambio de tema (🌚/🌞) — se coloca en la columna izquierda */
     #btn-tema {
-      justify-self: start;
+      justify-self: start;             /* pega el botón a la izquierda de su columna */
       background: var(--btn-bg);
       border: 1px solid var(--borde);
-      border-radius: 20px;
+      border-radius: 20px;             /* forma de píldora redondeada */
       padding: 5px 12px;
       cursor: pointer;
       font-size: 1rem;
@@ -71,20 +134,32 @@
     }
     #btn-tema:hover { background: var(--btn-hover); opacity: 1; }
 
+    /* Título principal — centrado automáticamente en la columna central */
     h1 {
       justify-self: center;
+      /*
+        clamp(mínimo, preferido, máximo): el tamaño crece de forma fluida
+        con el ancho de la ventana entre 1.2rem (móvil estrecho)
+        y 1.8rem (escritorio). 5vw es el valor proporcional del medio.
+      */
       font-size: clamp(1.2rem, 5vw, 1.8rem);
       white-space: nowrap;
     }
 
-    /* ── Selector de perfil (derecha) ────────────────────────────── */
+    /* 
+       SELECTOR DE PERFIL — Controles en la columna derecha
+
+       Contiene el <select> de perfiles y los botones de acción:
+      editar nombre, crear perfil, borrar, reiniciar stats.
+    */
     #perfil-wrapper {
-      justify-self: end;
+      justify-self: end;               /* pega el grupo a la derecha de su columna */
       display: flex;
       align-items: center;
       gap: 5px;
     }
 
+    /* Desplegable nativo del navegador para seleccionar entre perfiles */
     #perfil-select {
       background: var(--btn-bg);
       border: 1px solid var(--borde);
@@ -96,9 +171,16 @@
       max-width: 110px;
       transition: background 0.3s, color 0.3s, border-color 0.3s;
     }
+    /* Las opciones del select heredan el fondo del tema para coherencia visual */
     #perfil-select option { background: var(--btn-bg); color: var(--texto); }
 
-    /* Botones pequeños de gestión de perfil */
+    /*
+      Botones de gestión de perfil: clase base .btn-perfil compartida
+      con modificadores de color según la acción:
+      - btn-crear (verde): crear nuevo perfil
+      - btn-borrar (rojo): borrar perfil activo
+      - btn-reiniciar (dorado): reiniciar estadísticas con confirmación
+    */
     .btn-perfil {
       background: var(--btn-bg);
       border: 1px solid var(--borde);
@@ -112,24 +194,26 @@
       margin: 0;
       line-height: 1;
     }
-    .btn-perfil:hover        { background: var(--btn-hover); color: var(--texto); opacity: 1; }
-    .btn-perfil.btn-crear    { color: #6aaa64; border-color: #6aaa64; }
-    .btn-perfil.btn-crear:hover { background: #6aaa64; color: white; }
-    .btn-perfil.btn-borrar   { color: #c04040; border-color: #c04040; }
-    .btn-perfil.btn-borrar:hover { background: #c04040; color: white; }
-    .btn-perfil.btn-reiniciar { color: #b59f3b; border-color: #b59f3b; }
+    .btn-perfil:hover { background: var(--btn-hover); color: var(--texto); opacity: 1; }
+
+    /* Verde: acción positiva (crear) */
+    .btn-perfil.btn-crear         { color: #6aaa64; border-color: #6aaa64; }
+    .btn-perfil.btn-crear:hover   { background: #6aaa64; color: white; }
+
+    /* Rojo: acción destructiva (borrar), requiere confirmación en JS */
+    .btn-perfil.btn-borrar        { color: #c04040; border-color: #c04040; }
+    .btn-perfil.btn-borrar:hover  { background: #c04040; color: white; }
+
+    /* Dorado: acción de reinicio, requiere confirmación en JS */
+    .btn-perfil.btn-reiniciar       { color: #b59f3b; border-color: #b59f3b; }
     .btn-perfil.btn-reiniciar:hover { background: #b59f3b; color: white; }
 
-    /* ── Estado validación ───────────────────────────────────────── */
-    #ia-estado {
-      font-size: 0.78rem;
-      color: var(--texto-suave);
-      height: 16px;
-      margin: 4px 0;
-      text-align: center;
-    }
-
-    /* ── Stats ───────────────────────────────────────────────────── */
+    /* ESTADÍSTICAS DEL PERFIL ACTIVO
+  
+       Muestra "Jugadas: X | Ganadas: X | Derrotas: X".
+       El contenido lo escribe actualizarStats() en script.js
+       cada vez que cambia el perfil o termina una partida.
+    */
     #stats {
       font-size: 0.85rem;
       color: var(--texto-suave);
@@ -137,9 +221,9 @@
       text-align: center;
     }
 
-    /* ── Botón nueva partida ─────────────────────────────────────── */
+    /* Botón principal para iniciar una nueva partida */
     #btn-nueva {
-      background: #538d4e;
+      background: #548d4f;
       color: white;
       border: none;
       border-radius: 6px;
@@ -151,22 +235,42 @@
     }
     #btn-nueva:hover { opacity: 0.88; }
 
-    /* ── Tablero ─────────────────────────────────────────────────── */
+    /* TABLERO DE JUEGO — Grid de 6 filas × 5 columnas
+      
+      El tablero es un contenedor grid de 6 filas (los 6 intentos).
+       Cada fila (.fila) es a su vez un grid de 5 columnas (las 5 letras).
+       Las celdas (.celda) se crean dinámicamente en script.js
+       mediante crearTablero() y se almacenan en celdas[][].
+    */
     #tablero {
       display: grid;
       grid-template-rows: repeat(6, 1fr);
+      /*
+        clamp(4px, 1.2vw, 6px): el gap entre filas crece proporcionalmente
+        con el ancho de la ventana, manteniéndose siempre entre 4px y 6px.
+      */
       gap: clamp(4px, 1.2vw, 6px);
       margin: 12px 0;
     }
 
+    /* Cada fila del tablero: grid de 5 celdas del tamaño de --celda */
     .fila {
       display: grid;
       grid-template-columns: repeat(5, var(--celda));
       gap: clamp(4px, 1.2vw, 6px);
     }
 
+    /*
+      --celda define el tamaño de cada celda del tablero.
+      clamp(44px, 12vw, 62px):
+      - mínimo 44px en pantallas muy estrechas (< 367px)
+      - máximo 62px en pantallas anchas (> 517px)
+      - 12vw crece proporcionalmente entre ambos extremos
+      Esta variable se usa también en .fila para las columnas.
+    */
     :root { --celda: clamp(44px, 12vw, 62px); }
 
+    /* Cada casilla del tablero donde el jugador escribe una letra */
     .celda {
       width:  var(--celda);
       height: var(--celda);
@@ -176,21 +280,45 @@
       align-items: center;
       font-size: clamp(1.3rem, 5vw, 2rem);
       font-weight: bold;
-      text-transform: uppercase;
+      text-transform: uppercase;   /* muestra las letras siempre en mayúsculas */
+      /*
+        transition en transform: permite la animación de volteo.
+        transition en border-color: suaviza el cambio al cambiar de tema.
+      */
       transition: transform 0.3s, border-color 0.3s;
       color: var(--texto);
       background: transparent;
     }
 
+    /*
+      Clase .flip: activa la animación de volteo de la celda.
+      Se añade mediante JavaScript (celda.classList.add("flip"))
+      después de validar el intento. La transición CSS de 0.3s
+      interpola automáticamente el rotateX de 0 a 360 grados.
+    */
     .flip { transform: rotateX(360deg); }
 
+    /*
+      Colores de resultado: se aplican junto con .flip en script.js.
+      !important garantiza que sobreescriban cualquier otro estilo,
+      incluyendo el color de borde de .celda.
+      Estos colores son iguales en ambos temas (día y noche)
+      para mantener la legibilidad del feedback visual.
+    */
     .verde    { background: #6aaa64 !important; border-color: #6aaa64 !important; color: #fff !important; }
     .amarillo { background: #c9b458 !important; border-color: #c9b458 !important; color: #fff !important; }
     .gris     { background: #787c7e !important; border-color: #787c7e !important; color: #fff !important; }
 
-    /* ── Teclado ─────────────────────────────────────────────────── */
+    /*  TECLADO VIRTUAL
+
+       Tres filas de botones (Q-W-E-..., A-S-D-..., ↵-Z-X-...-⌫).
+       Se construye dinámicamente en crearTeclado() (script.js).
+       Las teclas acumulan el mejor color conocido para cada letra
+       a lo largo de la partida: verde > amarillo > gris.
+    */
     #teclado { margin-top: 8px; width: 100%; max-width: 500px; }
 
+    /* Cada fila del teclado virtual */
     .fila-teclado {
       display: flex;
       justify-content: center;
@@ -198,8 +326,13 @@
       margin-bottom: clamp(3px, 1vw, 6px);
     }
 
+    /* Botón de tecla estándar (una letra) */
     .tecla {
       flex: 1;
+      /*
+        max-width con clamp: cada tecla crece proporcionalmente
+        con el ancho de la pantalla entre 28px y 43px.
+      */
       max-width: clamp(28px, 8vw, 43px);
       height: clamp(44px, 10vw, 58px);
       background: var(--tecla-bg);
@@ -216,18 +349,37 @@
       justify-content: center;
     }
 
-    .tecla-ancha { max-width: clamp(42px, 11vw, 65px); font-size: clamp(0.55rem, 2vw, 0.75rem); }
+    /*
+      .tecla-ancha: clase adicional para las teclas Enter (⏎) y Borrar (⌫).
+      Al estar en filas de 11 teclas con flex:1, todas las teclas se reparten
+      el espacio a partes iguales y max-width queda ignorado.
+      flex:1.5 hace que ⏎ y ⌫ "pesen" un 50% más en el reparto,
+      quedando visiblemente más anchas que las teclas de letras.
+      IMPORTANTE: este bloque debe ir DESPUÉS de .tecla en el CSS
+      para que max-width:none sobreescriba el max-width de .tecla.
+    */
+    .tecla-ancha {
+      flex: 1.5;                                 /* ocupa 1.5 partes en lugar de 1 */
+      max-width: none;                           /* anula cualquier max-width heredado */
+      font-size: clamp(0.5rem, 1.8vw, 0.72rem); /* texto ligeramente más pequeño para que quepa el símbolo */
+    }
 
+    /* Estados de color de las teclas según el resultado de la partida */
     .tecla.verde    { background: #6aaa64; color: white; }
     .tecla.amarillo { background: #c9b458; color: white; }
     .tecla.gris     { background: #787c7e; color: white; }
 
-    /* ── Botones de modo ─────────────────────────────────────────── */
+    /* BOTONES DE MODO DE JUEGO
+
+       Dos botones para cambiar entre Modo clásico y Modo contrarreloj.
+       La clase .activo (añadida por resaltarModo() en script.js)
+       añade un borde blanco/negro al botón del modo actualmente activo.
+    */
     #botones-modo {
       display: flex;
       gap: 10px;
       margin: 12px 0 4px;
-      flex-wrap: wrap;
+      flex-wrap: wrap;             /* en pantallas muy estrechas los botones se apilan */
       justify-content: center;
     }
 
@@ -242,21 +394,39 @@
       margin: 0;
     }
     .btn-modo:hover { opacity: 0.88; }
+
+    /* Color diferenciado: verde para clásico, dorado para contrarreloj */
     #btn-clasico      { background: #538d4e; }
     #btn-contrarreloj { background: #b59f3b; }
+
+    /* Borde que indica el modo activo (gestionado por resaltarModo() en JS) */
     #btn-clasico.activo      { outline: 3px solid var(--texto); }
     #btn-contrarreloj.activo { outline: 3px solid var(--texto); }
 
-    /* ── Timer ───────────────────────────────────────────────────── */
+    /* TEMPORIZADOR — Modo contrarreloj
+
+       Solo visible durante el modo contrarreloj.
+       JavaScript cambia su color a rojo cuando quedan ≤ 10 segundos
+       (timerEl.style.color = "red") para avisar al jugador.
+       El contenido lo actualiza setInterval cada segundo en script.js.
+    */
     #timer {
       font-size: 1rem;
       font-weight: bold;
       margin-top: 6px;
       text-align: center;
-      min-height: 24px;
+      min-height: 24px;          /* reserva espacio aunque esté vacío (modo clásico) */
     }
 
-    /* ── Chuleta ─────────────────────────────────────────────────── */
+    /* CHULETA — Panel flotante con la palabra secreta
+
+       Botón circular fijo en la esquina inferior derecha (position: fixed).
+       Al hacer clic muestra/oculta un panel con la palabra secreta
+       en color dorado. Se cierra automáticamente al iniciar nueva partida.
+
+       position: fixed hace que siempre sea visible independientemente
+       del scroll. z-index: 500 lo coloca por encima del resto del contenido.
+    */
     #chuleta-wrapper {
       position: fixed;
       bottom: 20px;
@@ -268,6 +438,11 @@
       z-index: 500;
     }
 
+    /*
+      Panel de la chuleta: oculto por defecto (display: none).
+      La clase .visible (añadida por toggleChuleta() en JS) lo muestra.
+      La animación fadeIn suaviza la aparición del panel.
+    */
     #chuleta-panel {
       display: none;
       background: var(--bg2);
@@ -285,20 +460,22 @@
       margin-bottom: 6px;
     }
 
+    /* La palabra secreta se muestra con letra grande y espaciado entre letras */
     #chuleta-palabra {
       font-size: 1.6rem;
       font-weight: bold;
       letter-spacing: 6px;
-      color: #c9b458;
+      color: #c9b458;              /* dorado, igual que el amarillo del juego */
       text-transform: uppercase;
     }
 
     #chuleta-panel.visible { display: block; }
 
+    /* Botón circular 🔍 que abre/cierra la chuleta */
     #btn-chuleta {
       background: #b59f3b;
       border: none;
-      border-radius: 50%;
+      border-radius: 50%;          /* forma circular */
       width: 48px;
       height: 48px;
       font-size: 1.4rem;
@@ -312,67 +489,168 @@
       padding: 0;
       transition: transform 0.2s, opacity 0.2s;
     }
+    /* Al pasar el ratón el botón crece ligeramente para indicar interactividad */
     #btn-chuleta:hover { transform: scale(1.1); opacity: 1; }
 
+    /*
+      Animación fadeIn: hace que el panel de la chuleta aparezca
+      suavemente deslizándose hacia arriba desde 6px por debajo.
+    */
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ── Responsive ──────────────────────────────────────────────── */
+    /* MEDIA QUERIES — Ajustes para extremos de pantalla
+
+       La mayoría del responsive se gestiona con clamp() sin media queries.
+       Estas reglas solo son necesarias para los extremos más extremos
+       donde clamp() no es suficiente para garantizar usabilidad.
+    */
+
+    /* Móvil muy estrecho (menos de 360px): ajustes mínimos de tamaño */
     @media (max-width: 360px) {
       :root { --celda: 44px; }
-      .tecla { max-width: 26px; height: 42px; }
-      .tecla-ancha { max-width: 40px; }
+      .tecla       { max-width: 26px; height: 42px; }
+      .tecla-ancha { max-width: none; }   /* sobreescribe .tecla dentro de la media query */
       h1 { font-size: 1.1rem; }
       .btn-perfil { padding: 4px 5px; font-size: 0.75rem; }
     }
 
+    /* Tablet y escritorio (más de 600px): tamaños máximos definitivos */
     @media (min-width: 600px) {
       :root { --celda: 62px; }
-      .tecla { max-width: 43px; height: 58px; }
-      .tecla-ancha { max-width: 65px; }
+      .tecla       { max-width: 43px; height: 58px; }
+      .tecla-ancha { max-width: none; }   /* sobreescribe .tecla dentro de la media query */
     }
 
   </style>
 </head>
 <body>
 
-  <!-- Cabecera: tema | título | perfil -->
+  <!--
+    CABECERA
+
+    Grid de tres columnas: [botón tema] [título] [controles de perfil]
+    El título queda centrado independientemente del tamaño de los laterales.
+  -->
   <header id="cabecera">
+
+    <!-- Botón de cambio de tema día/noche. El emoji lo actualiza aplicarTema() en JS -->
     <button id="btn-tema" onclick="toggleTema()">🌚</button>
+
     <h1>Wordle PRO</h1>
+
+    <!--
+      Selector de perfil y sus controles de gestión.
+      El <select> se rellena dinámicamente mediante renderSelect() en JS.
+      Cada botón tiene un title para el tooltip del navegador.
+    -->
     <div id="perfil-wrapper">
+      <!-- Desplegable con los perfiles disponibles -->
       <select id="perfil-select" onchange="seleccionarPerfil(this.value)"></select>
+
+      <!-- Editar: cambia el nombre del perfil activo mediante prompt() -->
       <button class="btn-perfil" onclick="editarNombrePerfil()" title="Editar nombre">✎</button>
-      <button class="btn-perfil btn-crear"    onclick="crearPerfil()"    title="Nuevo perfil">＋</button>
-      <button class="btn-perfil btn-borrar"   onclick="borrarPerfil()"   title="Borrar perfil">🗑</button>
+
+      <!-- Crear: añade un nuevo perfil con ID único generado en JS -->
+      <button class="btn-perfil btn-crear" onclick="crearPerfil()" title="Nuevo perfil">+</button>
+
+      <!-- Borrar: elimina el perfil activo (requiere confirm() en JS) -->
+      <button class="btn-perfil btn-borrar" onclick="borrarPerfil()" title="Borrar perfil">🗑</button>
+
+      <!-- Reiniciar: pone a cero las stats del perfil activo (requiere confirm() en JS) -->
       <button class="btn-perfil btn-reiniciar" onclick="reiniciarStats()" title="Reiniciar estadísticas">↺</button>
     </div>
+
   </header>
 
-  <div id="ia-estado"></div>
+  <!--
+    CONTROLES PRINCIPALES
+  -->
+
+  <!-- Inicia una nueva partida en el modo actualmente seleccionado -->
   <button id="btn-nueva" onclick="nuevaPartida()">Nueva partida</button>
+
+  <!--
+    Estadísticas del perfil activo: "Jugadas: X | Ganadas: X | Derrotas: X"
+    El contenido lo escribe actualizarStats() en script.js.
+    Se actualiza al cambiar de perfil, al ganar y al perder.
+  -->
   <div id="stats"></div>
 
+  <!-- TABLERO DE JUEGO
+
+    Contenedor vacío: las 6 filas y las 5 celdas de cada fila
+    se crean dinámicamente por crearTablero() en script.js al
+    iniciar cada partida. Las referencias a las celdas se guardan
+    en el array bidimensional celdas[fila][columna].
+  -->
   <div id="tablero"></div>
+
+  <!-- TECLADO VIRTUAL
+
+    Contenedor vacío: las tres filas de teclas (QWERTYUIOP,
+    ASDFGHJKL, ↵ZXCVBNM⌫) se crean por crearTeclado() en script.js.
+    Cada tecla tiene data-letra para que pintarTecla() pueda
+    localizarla con querySelector sin usar IDs.
+    Las teclas Enter y Borrar reciben además la clase .tecla-ancha.
+  -->
   <div id="teclado"></div>
 
+  <!-- BOTONES DE MODO DE JUEGO
+
+    Permiten cambiar entre modo clásico (sin tiempo) y contrarreloj
+    (60 segundos). La clase .activo la gestiona resaltarModo() en JS
+    para indicar visualmente qué modo está seleccionado.
+  -->
   <div id="botones-modo">
     <button id="btn-clasico"      class="btn-modo" onclick="activarModoClasico()">Modo clásico</button>
     <button id="btn-contrarreloj" class="btn-modo" onclick="activarContrarreloj()">Modo contrarreloj</button>
   </div>
+
+  <!--
+    Contador del temporizador en modo contrarreloj.
+    Vacío en modo clásico. JavaScript escribe "Tiempo: Xs" cada segundo
+    y cambia el color a rojo cuando quedan 10 segundos o menos.
+    min-height en CSS reserva su espacio aunque esté vacío.
+  -->
   <div id="timer"></div>
 
-  <!-- Chuleta -->
+  <!-- CHULETA — Botón flotante + panel con la palabra secreta
+
+    Posicionado de forma fija en la esquina inferior derecha.
+    El panel (#chuleta-panel) se muestra/oculta con toggleChuleta()
+    añadiendo/quitando la clase .visible.
+    Se cierra automáticamente al iniciar una nueva partida (cerrarChuleta()).
+  -->
   <div id="chuleta-wrapper">
+
+    <!-- Panel oculto por defecto que muestra la palabra secreta -->
     <div id="chuleta-panel">
       <p>Palabra secreta</p>
+      <!-- El texto lo escribe toggleChuleta() con el valor de palabraSecreta -->
       <div id="chuleta-palabra">—</div>
     </div>
+
+    <!-- Botón circular 🔍 que abre/cierra el panel de la chuleta -->
     <button id="btn-chuleta" onclick="toggleChuleta()" title="Ver palabra secreta">🔍</button>
+
   </div>
 
+  <!--
+    script.js contiene toda la lógica del juego:
+    - Sistema de temas y perfiles
+    - Validación de palabras contra el diccionario JSON
+    - Construcción dinámica del tablero y el teclado
+    - Algoritmo de coloreado de celdas (dos pasadas para letras duplicadas)
+    - Gestión de animaciones con setTimeout
+    - Temporizador del modo contrarreloj
+    - Listener de teclado físico
+    Se carga al final del body para que el DOM esté disponible
+    cuando el script se ejecute.
+  -->
   <script src="script.js"></script>
+
 </body>
 </html>
