@@ -25,10 +25,10 @@ function cerrarChuleta() {
 let temaActual = localStorage.getItem("wordleTema") || "noche"; // Lee el tema guardado; si no existe, usar "noche" como predeterminado.
 
 function aplicarTema(tema) {
-  document.documentElement.setAttribute("data-tema", tema);
-  document.getElementById("btn-tema").textContent = tema === "noche" ? "🌚" : "🌞";
+  document.documentElement.setAttribute("data-tema", tema); // activa el bloque CSS [data-tema] correspondiente
+  document.getElementById("btn-tema").textContent = tema === "noche" ? "🌚" : "🌞"; // actualizar icono del botón
   temaActual = tema;
-  localStorage.setItem("wordleTema", tema);
+  localStorage.setItem("wordleTema", tema); // persistir entre sesiones
 }
 
 function toggleTema() {
@@ -48,12 +48,12 @@ async function cargarPalabras() {
     palabras = await res.json();
   } catch (e) {
     console.error("Error cargando JSON:", e);
-    palabras = [];
+    palabras = []; // array vacío: el juego no podrá elegir palabras pero no lanzará errores
   }
 }
 
 function validarPalabra(palabra) {
-  return palabras.includes(palabra);
+  return palabras.includes(palabra); // true si existe, false si no
 }
 
 // PERFILES 
@@ -68,18 +68,18 @@ function guardarPerfilesIds(ids) {
   localStorage.setItem("wordlePerfilesIds", JSON.stringify(ids));
 }
 
-let perfilActual = parseInt(localStorage.getItem("wordlePerfilActual") || "0");
+let perfilActual = parseInt(localStorage.getItem("wordlePerfilActual") || "0"); // parseInt porque localStorage devuelve strings
 
 function claveStats(id)  { return `wordleStats_perfil${id}`; }
 function claveNombre(id) { return `wordleNombre_perfil${id}`; }
 
 function getNombre(id) {
-  return localStorage.getItem(claveNombre(id)) || `Jugador ${id + 1}`;
+  return localStorage.getItem(claveNombre(id)) || `Jugador ${id + 1}`; // nombre por defecto si el perfil no tiene uno guardado
 }
 
 // ESTADISTICAS (Stats)
 function getStats(id) {
-  return JSON.parse(localStorage.getItem(claveStats(id))) || { jugadas: 0, ganadas: 0, derrotas: 0 };
+  return JSON.parse(localStorage.getItem(claveStats(id))) || { jugadas: 0, ganadas: 0, derrotas: 0 }; // objeto vacío si el perfil es nuevo
 }
 
 function guardarStats(id, s) {
@@ -91,7 +91,7 @@ let stats = getStats(perfilActual);
 // Renderizar select de perfiles 
 function renderSelect() {
   const sel = document.getElementById("perfil-select");
-  sel.innerHTML = "";
+  sel.innerHTML = ""; // limpiar opciones anteriores antes de redibujar
   const ids = getPerfilesIds();
   ids.forEach(id => {
     const opt = document.createElement("option");
@@ -253,11 +253,11 @@ function crearTablero() {
   }
 }
 
-// 10. CONSTRUCCIÓN DEL TECLADO VIRTUAL
+// CONSTRUCCIÓN DEL TECLADO VIRTUAL
 // 
 // Tres filas tipo teclado genérico español:
 //   Fila 1: Q W E R T Y U I O P ⌫
-//   Fila 2: A S D F G H J K L Ñ ⏎
+//   Fila 2: A S D F G H J K L Ñ ⏎ (Uso ✔️ para que Enter sea más visual)
 //   Fila 3:   Z X C V B N M
 // ⌫ y ⏎ están integradas en sus filas (no en fila propia)
 // y reciben la clase .tecla-ancha para ser más anchas que el resto.
@@ -267,7 +267,7 @@ function crearTeclado() {
 
   const layout = [
     ["Q","W","E","R","T","Y","U","I","O","P","⌫"],
-    ["A","S","D","F","G","H","J","K","L","Ñ","⏎"],
+    ["A","S","D","F","G","H","J","K","L","Ñ","✔️"],
     ["Z","X","C","V","B","N","M"]
     // Nota: se eliminó la coma inicial de esta fila ([,"Z"...])
     // que creaba un elemento undefined y rompía el forEach
@@ -281,7 +281,7 @@ function crearTeclado() {
       const btn = document.createElement("button");
 
       // ⌫ y ⏎ reciben la clase adicional tecla-ancha para ser más anchas
-      btn.className = "tecla" + (letra === "⏎" || letra === "⌫" ? " tecla-ancha" : "");
+      btn.className = "tecla" + (letra === "✔️" || letra === "⌫" ? " tecla-ancha" : "");
       btn.textContent = letra;
 
       // data-letra permite localizar la tecla desde pintarTecla()
@@ -294,7 +294,7 @@ function crearTeclado() {
       btn.addEventListener("mousedown", e => e.preventDefault());
 
       btn.addEventListener("click", () => {
-        if      (letra === "⏎") enviarIntento();
+        if      (letra === "✔️") enviarIntento();
         else if (letra === "⌫") borrarLetra();
         else                    escribirLetra(letra);
       });
@@ -307,19 +307,21 @@ function crearTeclado() {
 }
 
 // PINTAR TECLA
+// El teclado acumula el MEJOR estado conocido para cada letra: verde > amarillo > gris.
+// Un estado nunca retrocede a uno peor (una tecla verde no puede volverse gris).
 function pintarTecla(letra, estado) {
   const btn = tecladoEl.querySelector(`[data-letra="${letra}"]`);
   if (!btn) return;
   if (estado === "verde") {
-    btn.classList.remove("amarillo","gris");
+    btn.classList.remove("amarillo","gris"); // verde es máximo: elimina estados previos
     btn.classList.add("verde");
   } else if (estado === "amarillo") {
-    if (!btn.classList.contains("verde")) {
+    if (!btn.classList.contains("verde")) { // no degradar si ya es verde
       btn.classList.remove("gris");
       btn.classList.add("amarillo");
     }
-  } else {
-    if (!btn.classList.contains("verde") && !btn.classList.contains("amarillo")) {
+  } else { // gris: letra descartada, tecla se oscurece visualmente
+    if (!btn.classList.contains("verde") && !btn.classList.contains("amarillo")) { // solo si no tiene estado mejor
       btn.classList.add("gris");
     }
   }
@@ -327,24 +329,25 @@ function pintarTecla(letra, estado) {
 
 // BOTONES DE MODO
 function resaltarModo() {
+  // toggle(clase, condición): añade la clase si true, la quita si false
   document.getElementById("btn-clasico").classList.toggle("activo", !modoContrarreloj);
   document.getElementById("btn-contrarreloj").classList.toggle("activo", modoContrarreloj);
 }
 
 // TEMPORIZADOR 
 function iniciarTemporizador() {
-  clearInterval(intervalo);
+  clearInterval(intervalo); // limpiar antes: evita dos intervalos en paralelo si se llama dos veces seguidas
   tiempo = 60;
   timerEl.style.color = temaActual === "noche" ? "white" : "#121213";
   timerEl.textContent = `Tiempo: ${tiempo}s`;
   intervalo = setInterval(() => {
     tiempo--;
     timerEl.textContent = `Tiempo: ${tiempo}s`;
-    if (tiempo <= 10) timerEl.style.color = "red";
+    if (tiempo <= 10) timerEl.style.color = "red"; // aviso visual en los últimos 10 segundos
     if (tiempo <= 0) {
       clearInterval(intervalo);
       juegoActivo = false;
-      // CAMBIO 1: contabilizar derrota por tiempo agotado
+      // Contabilizar derrota por tiempo agotado
       stats.jugadas++;
       stats.derrotas++;
       guardarStats(perfilActual, stats);
@@ -397,19 +400,19 @@ function nuevaPartida() {
     timerEl.textContent = "";
   }
 
-  document.activeElement.blur();
+  document.activeElement.blur(); // quitar foco de botones para que Enter no los active accidentalmente
 }
 
 // ESCRIBIR / BORRAR
 function escribirLetra(letra) {
-  if (animando || !juegoActivo || letraActual >= 5) return;
+  if (animando || !juegoActivo || letraActual >= 5) return; // animación en curso / partida terminada / fila llena
   celdas[filaActual][letraActual].textContent = letra;
   letraActual++;
 }
 
 function borrarLetra() {
-  if (animando || !juegoActivo || letraActual <= 0) return;
-  letraActual--;
+  if (animando || !juegoActivo || letraActual <= 0) return; // guard: fila vacía
+  letraActual--; // retroceder primero: letraActual apunta a la siguiente posición vacía
   celdas[filaActual][letraActual].textContent = "";
 }
 
@@ -419,19 +422,21 @@ function calcularResultados(intento) {
   const secreta    = palabraSecreta.split("");
   const intentoArr = intento.split("");
 
+  // Pasada 1: marcar verdes (posición exacta) y consumir esas letras con null
   for (let i = 0; i < 5; i++) {
     if (intentoArr[i] === secreta[i]) {
       resultado[i]  = "verde";
-      secreta[i]    = null;
+      secreta[i]    = null; // consumida: no participa en la pasada 2
       intentoArr[i] = null;
     }
   }
+  // Pasada 2: buscar amarillos solo entre letras no consumidas
   for (let i = 0; i < 5; i++) {
-    if (intentoArr[i] === null) continue;
+    if (intentoArr[i] === null) continue; // ya marcada como verde
     const idx = secreta.indexOf(intentoArr[i]);
     if (idx !== -1) {
       resultado[i] = "amarillo";
-      secreta[idx] = null;
+      secreta[idx] = null; // consumir para no marcar la misma letra dos veces
     }
   }
   return resultado;
@@ -452,8 +457,8 @@ function enviarIntento() {
     return;
   }
 
-  const filaIdx       = filaActual;
-  const filaCeldas    = celdas[filaIdx];
+  const filaIdx       = filaActual; // capturar ANTES del timeout: filaActual puede cambiar después
+  const filaCeldas    = celdas[filaIdx]; // referencia directa a los divs de esta fila
   const resultados    = calcularResultados(intento);
   const tokenActual   = tokenPartida; // capturar el token de ESTA partida
 
@@ -463,9 +468,9 @@ function enviarIntento() {
     const letra  = intento[i];
     setTimeout(() => {
       if (tokenPartida !== tokenActual) return; // partida cancelada: ignorar
-      celda.classList.add("flip", estado);
+      celda.classList.add("flip", estado); // activar animación CSS + aplicar color
       pintarTecla(letra, estado);
-    }, i * 300);
+    }, i * 300); // retardo escalonado: celda 0→0ms, celda 4→1200ms
   }
 
   setTimeout(() => {
@@ -488,7 +493,7 @@ function enviarIntento() {
     if (siguienteFila >= 6) {
       juegoActivo = false;
       detenerTemporizador();
-      // CAMBIO 1: contabilizar derrota al agotar los 6 intentos
+      // Contabilizar derrota al agotar los 6 intentos
       stats.jugadas++;
       stats.derrotas++;
       guardarStats(perfilActual, stats);
@@ -497,30 +502,30 @@ function enviarIntento() {
       return;
     }
 
-    filaActual  = siguienteFila;
+    filaActual  = siguienteFila; // avanzar fila SOLO aquí, después de que terminaron las animaciones
     letraActual = 0;
     juegoActivo = true;
 
-  }, 5 * 300 + 300);
+  }, 5 * 300 + 300); // 1800ms: esperar a que terminen todas las animaciones
 }
 
 // TECLADO FÍSICO
 document.addEventListener("keydown", e => {
   if (e.key === "Enter") {
-    e.preventDefault();
+    e.preventDefault(); // evita que Enter active el botón que tenga el foco
     enviarIntento();
   } else if (e.key === "Backspace") {
-    e.preventDefault();
+    e.preventDefault(); // evita que Backspace navegue a la página anterior
     borrarLetra();
-  } else if (/^[a-zA-ZñÑ]$/.test(e.key)) {
+  } else if (/^[a-zA-ZñÑ]$/.test(e.key)) { // acepta letras españolas incluyendo ñ/Ñ
     escribirLetra(e.key.toUpperCase());
   }
 });
 
 // ARRANQUE
 async function iniciar() {
-  aplicarTema(temaActual);
-  await cargarPalabras();
+  aplicarTema(temaActual);  // aplicar tema primero: evita el "flash" de tema incorrecto al cargar
+  await cargarPalabras();   // esperar el JSON antes de elegir palabra
   renderSelect();
   resaltarModo();
   nuevaPartida();

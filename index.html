@@ -1,7 +1,5 @@
 <!DOCTYPE html>
-<!--
-  Wordle PRO — index.html
-  Autor: Darín Atanasov Atanasov
+<!-- Autor: Darín Atanasov Atanasov
   IES Matemático Puig Adam · DAW 2025-2026
                                                                  
   Este fichero contiene la estructura HTML de la aplicación
@@ -41,11 +39,11 @@
        Se definen dos conjuntos de variables:
        - :root → valores del tema noche (predeterminado)
        - [data-tema="dia"] → valores que sobreescriben :root cuando
-          JavaScript cambia el atributo data-tema en <html>.
+       JavaScript cambia el atributo data-tema en <html>.
 
        Ventaja: cambiar el tema requiere una sola operación en JS
        (setAttribute) y el navegador propaga todos los colores
-       automáticamente a traves del árbol CSS.
+       automáticamente a traves del arbol CSS.
     */
 
     /* Tema noche (valores por defecto) */
@@ -146,10 +144,9 @@
       white-space: nowrap;
     }
 
-    /* 
-       SELECTOR DE PERFIL — Controles en la columna derecha
+    /*  SELECTOR DE PERFIL — Controles en la columna derecha
 
-       Contiene el <select> de perfiles y los botones de acción:
+        Contiene el <select> de perfiles y los botones de acción:
       editar nombre, crear perfil, borrar, reiniciar stats.
     */
     #perfil-wrapper {
@@ -197,8 +194,8 @@
     .btn-perfil:hover { background: var(--btn-hover); color: var(--texto); opacity: 1; }
 
     /* Verde: acción positiva (crear) */
-    .btn-perfil.btn-crear         { color: #6aaa64; border-color: #6aaa64; }
-    .btn-perfil.btn-crear:hover   { background: #6aaa64; color: white; }
+    .btn-perfil.btn-crear         { color: #66a360; border-color: #66a360; }
+    .btn-perfil.btn-crear:hover   { background: #66a360; color: white; }
 
     /* Rojo: acción destructiva (borrar), requiere confirmación en JS */
     .btn-perfil.btn-borrar        { color: #c04040; border-color: #c04040; }
@@ -305,13 +302,13 @@
       Estos colores son iguales en ambos temas (día y noche)
       para mantener la legibilidad del feedback visual.
     */
-    .verde    { background: #6aaa64 !important; border-color: #6aaa64 !important; color: #fff !important; }
+    .verde    { background: #66a360 !important; border-color: #66a360 !important; color: #fff !important; }
     .amarillo { background: #c9b458 !important; border-color: #c9b458 !important; color: #fff !important; }
-    .gris     { background: #787c7e !important; border-color: #787c7e !important; color: #fff !important; }
+    .gris     { background: #4b4e50 !important; border-color: #787c7e !important; color: #fff !important; }
 
     /*  TECLADO VIRTUAL
 
-       Tres filas de botones (Q-W-E-..., A-S-D-..., ↵-Z-X-...-⌫).
+       Tres filas de botones (Q-W-E-..., A-S-D-..., Z-X-C-...-✔️).
        Se construye dinámicamente en crearTeclado() (script.js).
        Las teclas acumulan el mejor color conocido para cada letra
        a lo largo de la partida: verde > amarillo > gris.
@@ -350,11 +347,8 @@
     }
 
     /*
-      .tecla-ancha: clase adicional para las teclas Enter (⏎) y Borrar (⌫).
-      Al estar en filas de 11 teclas con flex:1, todas las teclas se reparten
-      el espacio a partes iguales y max-width queda ignorado.
-      flex:1.5 hace que ⏎ y ⌫ "pesen" un 50% más en el reparto,
-      quedando visiblemente más anchas que las teclas de letras.
+      .tecla-ancha: clase adicional para las teclas Enter (✔️) y Borrar (⌫).
+      
       IMPORTANTE: este bloque debe ir DESPUÉS de .tecla en el CSS
       para que max-width:none sobreescriba el max-width de .tecla.
     */
@@ -365,9 +359,9 @@
     }
 
     /* Estados de color de las teclas según el resultado de la partida */
-    .tecla.verde    { background: #6aaa64; color: white; }
+    .tecla.verde    { background: #66a360; color: white; }
     .tecla.amarillo { background: #c9b458; color: white; }
-    .tecla.gris     { background: #787c7e; color: white; }
+    .tecla.gris     { background: #3a3a3c; color: #777777; }  /* más oscuro que el fondo normal: letra descartada */
 
     /* BOTONES DE MODO DE JUEGO
 
@@ -441,7 +435,7 @@
     /*
       Panel de la chuleta: oculto por defecto (display: none).
       La clase .visible (añadida por toggleChuleta() en JS) lo muestra.
-      La animación fadeIn suaviza la aparición del panel.
+      La animación fadeIn suaviza la aparicion del panel.
     */
     #chuleta-panel {
       display: none;
@@ -471,7 +465,7 @@
 
     #chuleta-panel.visible { display: block; }
 
-    /* Botón circular 🔍 que abre/cierra la chuleta */
+    /* Boton circular con emoji de lupita que abre/cierra la chuleta */
     #btn-chuleta {
       background: #b59f3b;
       border: none;
@@ -528,11 +522,10 @@
 </head>
 <body>
 
-  <!--
-    CABECERA
+  <!-- CABECERA
 
-    Grid de tres columnas: [botón tema] [título] [controles de perfil]
-    El título queda centrado independientemente del tamaño de los laterales.
+   Grid de tres columnas: [botón tema] [título] [controles de perfil]
+   El título queda centrado independientemente del tamaño de los laterales.
   -->
   <header id="cabecera">
 
@@ -565,9 +558,7 @@
 
   </header>
 
-  <!--
-    CONTROLES PRINCIPALES
-  -->
+  <!-- CONTROLES PRINCIPALES -->
 
   <!-- Inicia una nueva partida en el modo actualmente seleccionado -->
   <button id="btn-nueva" onclick="nuevaPartida()">Nueva partida</button>
@@ -590,8 +581,7 @@
 
   <!-- TECLADO VIRTUAL
 
-    Contenedor vacío: las tres filas de teclas (QWERTYUIOP,
-    ASDFGHJKL, ↵ZXCVBNM⌫) se crean por crearTeclado() en script.js.
+    Contenedor vacío: las tres filas de teclas se crean por crearTeclado() en script.js.
     Cada tecla tiene data-letra para que pintarTecla() pueda
     localizarla con querySelector sin usar IDs.
     Las teclas Enter y Borrar reciben además la clase .tecla-ancha.
@@ -647,8 +637,7 @@
     - Gestión de animaciones con setTimeout
     - Temporizador del modo contrarreloj
     - Listener de teclado físico
-    Se carga al final del body para que el DOM esté disponible
-    cuando el script se ejecute.
+    Se carga al final del body para que el DOM esté disponible cuando el script se ejecute.
   -->
   <script src="script.js"></script>
 
